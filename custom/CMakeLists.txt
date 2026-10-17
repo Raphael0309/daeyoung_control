@@ -81,6 +81,7 @@ set(CUSTOM_SOURCES
 
 set(CUSTOM_LIBRARIES
     CustomModule # Explicitly link QML module, needed by Qt 6.6.3, TODO: Remove when support for this version is dropped
+    AutoPilotPluginsPX4Module
     CACHE INTERNAL "" FORCE
 )
 

@@ -1,0 +1,9 @@
+# Qt Creator / CMake generated files (in-source configure of custom/)
+.cmake/
+.qtcreator/
+CMakeFiles/
+CMakeCache.txt
+CMakeCache.txt.prev
+qtcsettings.cmake
+*.user
+build/

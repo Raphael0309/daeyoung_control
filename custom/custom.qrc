@@ -27,4 +27,7 @@
         <file alias="QGCLogoFull.svg">res/QGCLogoFull.svg</file>
         <file alias="qgroundcontrol.ico">res/icons/custom_qgroundcontrol.ico</file>
     </qresource>
+    <qresource prefix="/Custom/qml/QGroundControl/VehicleSetup">
+    <file alias="VehicleSummary.qml">res/Custom/qml/QGroundControl/VehicleSetup/VehicleSummary.qml</file>
+</qresource>
 </RCC>

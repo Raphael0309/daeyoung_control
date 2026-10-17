@@ -78,7 +78,7 @@ CustomPlugin::CustomPlugin(QObject *parent)
     : QGCCorePlugin(parent)
     , _options(new CustomOptions(this, this))
 {
-    _showAdvancedUI = false;
+    _showAdvancedUI = true;
     connect(this, &QGCCorePlugin::showAdvancedUIChanged, this, &CustomPlugin::_advancedChanged);
 }
 
@@ -142,9 +142,6 @@ bool CustomPlugin::overrideSettingsGroupVisibility(const QString &name)
 {
     // We have set up our own specific brand imaging. Hide the brand image settings such that the end user
     // can't change it.
-    if (name == BrandImageSettings::name) {
-        return false;
-    }
     return true;
 }
 
