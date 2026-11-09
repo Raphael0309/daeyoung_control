@@ -67,6 +67,13 @@ if(QGC_APP_VERSION_VALID GREATER -1)
 else()
     set(QGC_APP_VERSION "0.0.0")
 endif()
+# KEVA custom build: custom/cmake/CustomOverrides.cmake may pin the product version
+# instead of deriving it from the upstream QGC git tags.
+if(QGC_APP_VERSION_OVERRIDE)
+    set(QGC_APP_VERSION "${QGC_APP_VERSION_OVERRIDE}")
+    set(QGC_APP_VERSION_STR "v${QGC_APP_VERSION_OVERRIDE} (${QGC_GIT_HASH})")
+endif()
+
 string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" QGC_APP_VERSION_MATCH ${QGC_APP_VERSION})
 set(QGC_APP_VERSION_MAJOR ${CMAKE_MATCH_1})
 set(QGC_APP_VERSION_MINOR ${CMAKE_MATCH_2})
