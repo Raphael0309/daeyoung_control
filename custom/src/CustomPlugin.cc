@@ -16,6 +16,14 @@
 #include "QGCMAVLink.h"
 #include "AppSettings.h"
 #include "BrandImageSettings.h"
+#include "UnitsSettings.h"
+
+#ifdef KEVA_EDITION_MIL
+#include "LoginGate.h"
+#include <cstdlib>
+#endif
+
+#include <QtGui/QGuiApplication>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
 #include <QtCore/QApplicationStatic>
@@ -94,11 +102,39 @@ QGCCorePlugin *CustomPlugin::instance()
 
 void CustomPlugin::init()
 {
+#ifdef KEVA_DISPLAY_NAME
+    // Window titles and dialogs show the product name (QGC_APP_NAME has no spaces).
+    QGuiApplication::setApplicationDisplayName(QStringLiteral(KEVA_DISPLAY_NAME));
+#endif
 
+#ifdef KEVA_EDITION_MIL
+    // Secured edition: authenticate before QGC creates its main window and before
+    // any MAVLink link, video stream or map is started (SR-03 ~ SR-15).
+    _auth = new KevaSecurity::AuthManager(KevaSecurity::LoginGate::defaultOptions(), this);
+    if (!KevaSecurity::LoginGate::run(_auth)) {
+        qCInfo(CustomLog) << "Login not completed - exiting";
+        // QGC has no clean abort path at this point of start-up (GStreamer is already
+        // initialised). Audit records are flushed on every write, so leave immediately.
+        std::_Exit(0);
+    }
+    qCInfo(CustomLog) << "Logged in as" << _auth->currentUser() << (_auth->isAdmin() ? "(administrator)" : "(user)");
+#endif
+}
+
+// No first run prompts: units are fixed to metric and the vehicle type to PX4 VTOL.
+QList<int> CustomPlugin::firstRunPromptStdIds()
+{
+    return QList<int>();
 }
 
 void CustomPlugin::cleanup()
 {
+#ifdef KEVA_EDITION_MIL
+    if (_auth) {
+        _auth->recordLogout();
+    }
+#endif
+
     if (_qmlEngine) {
         _qmlEngine->removeUrlInterceptor(_selector);
     }
@@ -140,8 +176,10 @@ QString CustomPlugin::brandImageOutdoor(void) const
 
 bool CustomPlugin::overrideSettingsGroupVisibility(const QString &name)
 {
-    // We have set up our own specific brand imaging. Hide the brand image settings such that the end user
-    // can't change it.
+    // Units are fixed to metric (decided 2026-11-09); hide them from the settings pages.
+    if (name == QLatin1String(UnitsSettings::name)) {
+        return false;
+    }
     return true;
 }
 
@@ -157,9 +195,29 @@ bool CustomPlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaD
             metaData.setRawDefaultValue(QGCMAVLink::FirmwareClassPX4);
             return false;
         } else if (metaData.name() == AppSettings::offlineEditingVehicleClassName) {
-            metaData.setRawDefaultValue(QGCMAVLink::VehicleClassMultiRotor);
+            // KEVA airframes are PX4 VTOL
+            metaData.setRawDefaultValue(QGCMAVLink::VehicleClassVTOL);
             return false;
         }
+    }
+
+    // Metric units only. Returning false hides the setting and forces the default value.
+    if (settingsGroup == QLatin1String(UnitsSettings::settingsGroup)) {
+        const QString name = metaData.name();
+        if (name == QLatin1String(UnitsSettings::horizontalDistanceUnitsName)) {
+            metaData.setRawDefaultValue(static_cast<uint32_t>(UnitsSettings::HorizontalDistanceUnitsMeters));
+        } else if (name == QLatin1String(UnitsSettings::verticalDistanceUnitsName)) {
+            metaData.setRawDefaultValue(static_cast<uint32_t>(UnitsSettings::VerticalDistanceUnitsMeters));
+        } else if (name == QLatin1String(UnitsSettings::areaUnitsName)) {
+            metaData.setRawDefaultValue(static_cast<uint32_t>(UnitsSettings::AreaUnitsSquareMeters));
+        } else if (name == QLatin1String(UnitsSettings::speedUnitsName)) {
+            metaData.setRawDefaultValue(static_cast<uint32_t>(UnitsSettings::SpeedUnitsMetersPerSecond));
+        } else if (name == QLatin1String(UnitsSettings::temperatureUnitsName)) {
+            metaData.setRawDefaultValue(static_cast<uint32_t>(UnitsSettings::TemperatureUnitsCelsius));
+        } else if (name == QLatin1String(UnitsSettings::weightUnitsName)) {
+            metaData.setRawDefaultValue(static_cast<uint32_t>(UnitsSettings::WeightUnitsKg));
+        }
+        return false;
     }
 
     return parentResult;

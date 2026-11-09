@@ -22,6 +22,10 @@ class CustomPlugin;
 class CustomSettings;
 class QQmlApplicationEngine;
 
+#ifdef KEVA_EDITION_MIL
+namespace KevaSecurity { class AuthManager; }
+#endif
+
 Q_DECLARE_LOGGING_CATEGORY(CustomLog)
 
 class CustomFlyViewOptions : public QGCFlyViewOptions
@@ -72,6 +76,12 @@ public:
     bool                    adjustSettingMetaData           (const QString& settingsGroup, FactMetaData& metaData) final;
     void                    paletteOverride                 (const QString &colorName, QGCPalette::PaletteColorInfo_t& colorInfo) final;
     QQmlApplicationEngine*  createQmlApplicationEngine      (QObject* parent) final;
+    QList<int>              firstRunPromptStdIds            () final;
+
+#ifdef KEVA_EDITION_MIL
+    /// Login session of the secured edition (role, user ID). Valid after init().
+    KevaSecurity::AuthManager *authManager() const { return _auth; }
+#endif
 
 private slots:
     void _advancedChanged(bool advanced);
@@ -84,6 +94,9 @@ private:
     QQmlApplicationEngine *_qmlEngine = nullptr;
     class CustomOverrideInterceptor *_selector = nullptr;
     QVariantList    _customSettingsList; // Not to be mixed up with QGCCorePlugin implementation
+#ifdef KEVA_EDITION_MIL
+    KevaSecurity::AuthManager *_auth = nullptr;
+#endif
 };
 
 /*===========================================================================*/
