@@ -116,6 +116,11 @@ ApplicationWindow {
     }
 
     function showPlanView() {
+        // KEVA custom build: role based access
+        if (!QGroundControl.corePlugin.kevaCanPlan) {
+            showMessageDialog(qsTr("Plan Flight"), qsTr("Plan Flight is not available to administrator accounts."))
+            return
+        }
         flyView.visible = false
         planView.visible = true
     }
@@ -138,16 +143,26 @@ ApplicationWindow {
     }
 
     function showVehicleConfig() {
+        // KEVA custom build: role based access
+        if (!QGroundControl.corePlugin.kevaCanConfigureVehicle) {
+            showMessageDialog(qsTr("Vehicle Configuration"), qsTr("Vehicle Configuration is available to administrator accounts only."))
+            return false
+        }
         showTool(qsTr("Vehicle Configuration"), "qrc:/qml/QGroundControl/VehicleSetup/SetupView.qml", "/qmlimages/Gears.svg")
+        return true
     }
 
     function showVehicleConfigParametersPage() {
-        showVehicleConfig()
+        if (!showVehicleConfig()) {
+            return
+        }
         toolDrawerLoader.item.showParametersPanel()
     }
 
     function showKnownVehicleComponentConfigPage(knownVehicleComponent) {
-        showVehicleConfig()
+        if (!showVehicleConfig()) {
+            return
+        }
         let vehicleComponent = globals.activeVehicle.autopilotPlugin.findKnownVehicleComponent(knownVehicleComponent)
         if (vehicleComponent) {
             toolDrawerLoader.item.showVehicleComponentPanel(vehicleComponent)
@@ -341,6 +356,7 @@ ApplicationWindow {
                             Layout.fillWidth:   true
                             text:               qsTr("Plan Flight")
                             imageResource:      "/qmlimages/Plan.svg"
+                            visible:            QGroundControl.corePlugin.kevaCanPlan
                             onClicked: {
                                 if (mainWindow.allowViewSwitch()) {
                                     mainWindow.closeIndicatorDrawer()
@@ -370,6 +386,7 @@ ApplicationWindow {
                             Layout.fillWidth:   true
                             text:               qsTr("Vehicle Configuration")
                             imageResource:      "/qmlimages/Gears.svg"
+                            visible:            QGroundControl.corePlugin.kevaCanConfigureVehicle
                             onClicked: {
                                 if (mainWindow.allowViewSwitch()) {
                                     mainWindow.closeIndicatorDrawer()

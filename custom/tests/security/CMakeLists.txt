@@ -24,6 +24,7 @@ add_executable(tst_security
     ${SEC_DIR}/AuditLog.cc
     ${SEC_DIR}/AuthManager.cc
     ${SEC_DIR}/AuthManager.h
+    ${SEC_DIR}/AccessPolicy.cc
 )
 target_include_directories(tst_security PRIVATE ${SEC_DIR})
 target_compile_definitions(tst_security PRIVATE
@@ -50,6 +51,8 @@ if(Qt6Quick_FOUND AND Qt6QuickControls2_FOUND)
         ${SEC_DIR}/AuthManager.cc
         ${SEC_DIR}/AuthManager.h
         ${SEC_DIR}/LoginGate.cc
+        ${SEC_DIR}/IdleLockController.cc
+        ${SEC_DIR}/IdleLockController.h
         ${RES_DIR}/security.qrc
     )
     set_target_properties(login_preview PROPERTIES AUTORCC ON)

@@ -175,7 +175,9 @@ Item {
 
     property var    _corePlugin:            QGroundControl.corePlugin
     property var    _corePluginOptions:     QGroundControl.corePlugin.options
-    property bool   _guidedActionsEnabled:  (!ScreenTools.isDebug && _corePluginOptions.guidedActionsRequireRCRSSI && _activeVehicle) ? _rcRSSIAvailable : _activeVehicle
+    // KEVA custom build: administrator accounts monitor only (QGroundControl.corePlugin.kevaCanControlVehicle)
+    property bool   _guidedActionsEnabled:  QGroundControl.corePlugin.kevaCanControlVehicle &&
+                                            ((!ScreenTools.isDebug && _corePluginOptions.guidedActionsRequireRCRSSI && _activeVehicle) ? _rcRSSIAvailable : _activeVehicle)
     property string _flightMode:            _activeVehicle ? _activeVehicle.flightMode : ""
     property bool   _missionAvailable:      missionController.containsItems
     property bool   _missionActive:         _activeVehicle ? _vehicleArmed && (_vehicleInLandMode || _vehicleInRTLMode || _vehicleInMissionMode) : false
@@ -406,6 +408,10 @@ Item {
 
     // Called when an action is about to be executed in order to confirm
     function confirmAction(actionCode, actionData, mapIndicator) {
+        if (!QGroundControl.corePlugin.kevaCanControlVehicle) {
+            mainWindow.showMessageDialog(qsTr("Not Allowed"), qsTr("Administrator accounts cannot send flight commands."))
+            return
+        }
         var showImmediate = true
         closeAll()
         confirmDialog.action = actionCode
@@ -598,6 +604,9 @@ Item {
 
     // Executes the specified action
     function executeAction(actionCode, actionData, sliderOutputValue, optionChecked) {
+        if (!QGroundControl.corePlugin.kevaCanControlVehicle) {
+            return
+        }
         var i;
         var selectedVehicles;
         switch (actionCode) {

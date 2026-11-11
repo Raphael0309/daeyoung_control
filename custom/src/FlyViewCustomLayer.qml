@@ -69,6 +69,30 @@ Item {
         bottomEdgeRightInset:   parent.height - attitudeIndicator.y
     }
 
+    // Administrator sessions monitor only (SR-15): make that obvious on screen
+    Rectangle {
+        id:                         adminBanner
+        visible:                    QGroundControl.corePlugin.kevaIsAdmin
+        anchors.horizontalCenter:   parent.horizontalCenter
+        anchors.top:                parent.top
+        anchors.topMargin:          parentToolInsets.topEdgeCenterInset + _toolsMargin
+        width:                      adminBannerText.implicitWidth + ScreenTools.defaultFontPixelWidth * 3
+        height:                     adminBannerText.implicitHeight + ScreenTools.defaultFontPixelHeight * 0.6
+        radius:                     ScreenTools.defaultFontPixelHeight / 4
+        color:                      Qt.rgba(0, 0, 0, 0.7)
+        border.color:               "#FFA500"
+        border.width:               1
+        z:                          1000
+
+        QGCLabel {
+            id:                 adminBannerText
+            anchors.centerIn:   parent
+            text:               qsTr("ADMINISTRATOR (%1) - MONITORING ONLY").arg(QGroundControl.corePlugin.kevaUserId)
+            color:              "#FFA500"
+            font.bold:          true
+        }
+    }
+
     // This is an example of how you can use parent tool insets to position an element on the custom fly view layer
     // - we use parent topEdgeLeftInset to position the widget below the toolstrip
     // - we use parent bottomEdgeLeftInset to dodge the virtual joystick if enabled

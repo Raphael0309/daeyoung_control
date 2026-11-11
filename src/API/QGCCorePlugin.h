@@ -118,6 +118,13 @@ public:
     /// @return true: Allow vehicle to continue processing, false: Vehicle should not process message
     virtual bool mavlinkMessage(Vehicle *vehicle, LinkInterface *link, const mavlink_message_t &message) { Q_UNUSED(vehicle); Q_UNUSED(link); Q_UNUSED(message); return true; }
 
+    /// KEVA custom build: lets a custom plugin veto commands that control the vehicle (role based access).
+    ///     @param command MAV_CMD id, or kVehicleControlManual for MANUAL_CONTROL (joystick) data.
+    ///                    Manual control is checked from the joystick thread; keep the override thread safe.
+    /// @return false to drop the command
+    static constexpr int kVehicleControlManual = -1;
+    virtual bool vehicleControlAllowed(int command) { Q_UNUSED(command); return true; }
+
     /// Allows custom builds to add custom items to the FlightMap. Objects put into QmlObjectListModel should derive from QmlComponentInfo and set the url property.
     virtual const QmlObjectListModel *customMapItems();
 

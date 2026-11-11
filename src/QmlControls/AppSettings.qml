@@ -52,7 +52,7 @@ Rectangle {
 
     Component.onCompleted: {
         //-- Default Settings
-        if (globals.commingFromRIDIndicator) {
+        if (globals.commingFromRIDIndicator && QGroundControl.corePlugin.kevaSettingsPageAllowed("qrc:/qml/QGroundControl/AppSettings/RemoteIDSettings.qml")) {
             rightPanel.source = "qrc:/qml/QGroundControl/AppSettings/RemoteIDSettings.qml"
             globals.commingFromRIDIndicator = false
         } else {
@@ -89,7 +89,8 @@ Rectangle {
                     Layout.fillWidth:   true
                     text:               name
                     icon.source:        iconUrl
-                    visible:            pageVisible()
+                    // KEVA custom build: users see operational pages only
+                    visible:            pageVisible() && QGroundControl.corePlugin.kevaSettingsPageAllowed(url)
 
                     onClicked: {
                         if (mainWindow.allowViewSwitch()) {

@@ -46,6 +46,9 @@ class AuthManager : public QObject
     Q_PROPERTY(QString      productVersion  READ productVersion CONSTANT)
     Q_PROPERTY(QString      companyName     READ companyName    CONSTANT)
     Q_PROPERTY(QString      passwordRules   READ passwordRules  CONSTANT)
+    Q_PROPERTY(bool         sessionLocked   READ sessionLocked  NOTIFY sessionLockedChanged)
+    Q_PROPERTY(bool         sessionTerminated READ sessionTerminated NOTIFY sessionLockedChanged)
+    Q_PROPERTY(QString      lockText        READ lockText       NOTIFY sessionLockedChanged)
 
 public:
     struct Options
@@ -115,6 +118,14 @@ public:
     /// Called by the application on exit after a successful login.
     void recordLogout();
 
+    // Idle lock (decided 2026-11-09: 10 minutes, not while flying)
+    bool sessionLocked() const { return _sessionLocked; }
+    bool sessionTerminated() const { return _sessionTerminated; }
+    QString lockText() const { return _lockText; }
+    void lockSession(const QString &reason);
+    Q_INVOKABLE bool unlockSession(const QString &password);
+    Q_INVOKABLE void requestExit();
+
     // For tests and integration
     AccountStore *store() { return _store.get(); }
     AuditLog *audit() { return _audit.get(); }
@@ -126,6 +137,8 @@ signals:
     void sessionChanged();
     void accountsChanged();
     void finished(bool authenticated);
+    void sessionLockedChanged();
+    void exitRequested();
 
 private:
     struct FailOutcome
@@ -175,6 +188,10 @@ private:
     QString _currentId;
     Role _currentRole = Role::User;
     bool _clockRollbackLogged = false;
+
+    bool _sessionLocked = false;
+    bool _sessionTerminated = false;
+    QString _lockText;
 
     // Previous login, shown in the notice (SR-06)
     QDateTime _prevLoginUtc;

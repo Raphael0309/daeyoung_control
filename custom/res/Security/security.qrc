@@ -1,6 +1,7 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource prefix="/KevaSecurity">
     <file>LoginWindow.qml</file>
+    <file>LockWindow.qml</file>
     <file>logo.png</file>
     <file>dictionary_words.txt</file>
     <file>common_passwords.txt</file>

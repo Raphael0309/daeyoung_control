@@ -23,8 +23,11 @@ class CustomSettings;
 class QQmlApplicationEngine;
 
 #ifdef KEVA_EDITION_MIL
-namespace KevaSecurity { class AuthManager; }
+namespace KevaSecurity { class AuthManager; class IdleLockController; }
 #endif
+
+#include <QtCore/QElapsedTimer>
+#include <atomic>
 
 Q_DECLARE_LOGGING_CATEGORY(CustomLog)
 
@@ -60,6 +63,16 @@ private:
 class CustomPlugin : public QGCCorePlugin
 {
     Q_OBJECT
+
+    // Session and role information for QML (fixed for the life of the application;
+    // switching user means restarting). In the COM edition everything is allowed.
+    Q_PROPERTY(bool     kevaSecured             READ kevaSecured                CONSTANT)
+    Q_PROPERTY(bool     kevaIsAdmin             READ kevaIsAdmin                CONSTANT)
+    Q_PROPERTY(QString  kevaUserId              READ kevaUserId                 CONSTANT)
+    Q_PROPERTY(bool     kevaCanControlVehicle   READ kevaCanControlVehicle      CONSTANT)
+    Q_PROPERTY(bool     kevaCanPlan             READ kevaCanPlan                CONSTANT)
+    Q_PROPERTY(bool     kevaCanConfigureVehicle READ kevaCanConfigureVehicle    CONSTANT)
+
 public:
     explicit CustomPlugin(QObject *parent = nullptr);
     ~CustomPlugin();
@@ -77,6 +90,15 @@ public:
     void                    paletteOverride                 (const QString &colorName, QGCPalette::PaletteColorInfo_t& colorInfo) final;
     QQmlApplicationEngine*  createQmlApplicationEngine      (QObject* parent) final;
     QList<int>              firstRunPromptStdIds            () final;
+    bool                    vehicleControlAllowed           (int command) final;
+
+    bool    kevaSecured             () const;
+    bool    kevaIsAdmin             () const;
+    QString kevaUserId              () const;
+    bool    kevaCanControlVehicle   () const;
+    bool    kevaCanPlan             () const;
+    bool    kevaCanConfigureVehicle () const;
+    Q_INVOKABLE bool kevaSettingsPageAllowed(const QString &pageUrl) const;
 
 #ifdef KEVA_EDITION_MIL
     /// Login session of the secured edition (role, user ID). Valid after init().
@@ -96,6 +118,9 @@ private:
     QVariantList    _customSettingsList; // Not to be mixed up with QGCCorePlugin implementation
 #ifdef KEVA_EDITION_MIL
     KevaSecurity::AuthManager *_auth = nullptr;
+    KevaSecurity::IdleLockController *_idleLock = nullptr;
+    std::atomic<bool> _vehicleControlRestricted { false };
+    QElapsedTimer _lastDeniedNotice;
 #endif
 };
 

@@ -19,11 +19,32 @@
 #include "UnitsSettings.h"
 
 #ifdef KEVA_EDITION_MIL
+#include "AccessPolicy.h"
+#include "IdleLockController.h"
 #include "LoginGate.h"
+#include "MultiVehicleManager.h"
+#include "QGCApplication.h"
+#include "QmlObjectListModel.h"
+#include "SecurityConfig.h"
+#include "Vehicle.h"
 #include <cstdlib>
+
+// AccessPolicy uses plain numbers so it can be unit tested without MAVLink; make sure they still match.
+static_assert(MAV_CMD_NAV_LOITER_UNLIM == 17 && MAV_CMD_NAV_RETURN_TO_LAUNCH == 20 && MAV_CMD_NAV_LAND == 21 &&
+              MAV_CMD_NAV_TAKEOFF == 22 && MAV_CMD_DO_ORBIT == 34 && MAV_CMD_NAV_VTOL_TAKEOFF == 84 &&
+              MAV_CMD_NAV_VTOL_LAND == 85 && MAV_CMD_NAV_GUIDED_ENABLE == 92 && MAV_CMD_CONDITION_YAW == 115 &&
+              MAV_CMD_DO_SET_MODE == 176 && MAV_CMD_DO_CHANGE_SPEED == 178 && MAV_CMD_DO_SET_HOME == 179 &&
+              MAV_CMD_DO_FLIGHTTERMINATION == 185 && MAV_CMD_DO_CHANGE_ALTITUDE == 186 && MAV_CMD_DO_LAND_START == 189 &&
+              MAV_CMD_DO_GO_AROUND == 191 && MAV_CMD_DO_REPOSITION == 192 && MAV_CMD_DO_PAUSE_CONTINUE == 193 &&
+              MAV_CMD_DO_SET_ROI_LOCATION == 195 && MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET == 196 && MAV_CMD_DO_SET_ROI_NONE == 197 &&
+              MAV_CMD_DO_SET_ROI == 201 && MAV_CMD_DO_SET_MISSION_CURRENT == 224 && MAV_CMD_MISSION_START == 300 &&
+              MAV_CMD_COMPONENT_ARM_DISARM == 400 && MAV_CMD_DO_VTOL_TRANSITION == 3000,
+              "AccessPolicy flight command ids no longer match the MAVLink headers");
 #endif
 
 #include <QtGui/QGuiApplication>
+#include <QtGui/QWindow>
+#include <QtQuick/QQuickWindow>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
 #include <QtCore/QApplicationStatic>
@@ -118,6 +139,122 @@ void CustomPlugin::init()
         std::_Exit(0);
     }
     qCInfo(CustomLog) << "Logged in as" << _auth->currentUser() << (_auth->isAdmin() ? "(administrator)" : "(user)");
+
+    // Administrators monitor only: no flight commands, no joystick (SR-15)
+    _vehicleControlRestricted = _auth->isAdmin();
+    _lastDeniedNotice.invalidate();
+
+    // Idle lock: 10 minutes without input, never while a vehicle is armed
+    KevaSecurity::IdleLockController::Hooks hooks;
+    hooks.lockSuppressed = []() {
+        const QmlObjectListModel *vehicles = MultiVehicleManager::instance()->vehicles();
+        for (int i = 0; i < vehicles->count(); ++i) {
+            const Vehicle *vehicle = vehicles->value<Vehicle *>(i);
+            if (vehicle && vehicle->armed()) {
+                return true;
+            }
+        }
+        return false;
+    };
+    hooks.referenceWindow = []() -> QWindow * { return qgcApp()->mainRootWindow(); };
+    _idleLock = new KevaSecurity::IdleLockController(_auth, static_cast<qint64>(KevaSecurity::kIdleLockMinutes) * 60 * 1000, hooks, this);
+    connect(_auth, &KevaSecurity::AuthManager::exitRequested, qApp, &QCoreApplication::quit, Qt::QueuedConnection);
+    _idleLock->start();
+#endif
+}
+
+// ---------------------------------------------------------------------------
+// Role based access (SR-15)
+
+bool CustomPlugin::vehicleControlAllowed(int command)
+{
+#ifdef KEVA_EDITION_MIL
+    if (!_vehicleControlRestricted.load()) {
+        return true;
+    }
+    if (command == kVehicleControlManual) {
+        return false;   // joystick thread: no UI work here
+    }
+    if (!KevaSecurity::AccessPolicy::isFlightCommand(command)) {
+        return true;
+    }
+    if (!_lastDeniedNotice.isValid() || _lastDeniedNotice.elapsed() > 3000) {
+        _lastDeniedNotice.start();
+        qgcApp()->showAppMessage(tr("Administrator accounts cannot send flight commands."));
+        if (_auth && _auth->audit()) {
+            _auth->audit()->append(QStringLiteral("COMMAND_BLOCKED"), _auth->currentUser(), QStringLiteral("denied"),
+                                   QStringLiteral("MAV_CMD %1").arg(command));
+        }
+    }
+    return false;
+#else
+    Q_UNUSED(command)
+    return true;
+#endif
+}
+
+bool CustomPlugin::kevaSecured() const
+{
+#ifdef KEVA_EDITION_MIL
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool CustomPlugin::kevaIsAdmin() const
+{
+#ifdef KEVA_EDITION_MIL
+    return _auth && _auth->isAdmin();
+#else
+    return false;
+#endif
+}
+
+QString CustomPlugin::kevaUserId() const
+{
+#ifdef KEVA_EDITION_MIL
+    return _auth ? _auth->currentUser() : QString();
+#else
+    return QString();
+#endif
+}
+
+bool CustomPlugin::kevaCanControlVehicle() const
+{
+#ifdef KEVA_EDITION_MIL
+    return !kevaIsAdmin();
+#else
+    return true;
+#endif
+}
+
+bool CustomPlugin::kevaCanPlan() const
+{
+#ifdef KEVA_EDITION_MIL
+    return !kevaIsAdmin();
+#else
+    return true;
+#endif
+}
+
+bool CustomPlugin::kevaCanConfigureVehicle() const
+{
+#ifdef KEVA_EDITION_MIL
+    return kevaIsAdmin();
+#else
+    return true;
+#endif
+}
+
+bool CustomPlugin::kevaSettingsPageAllowed(const QString &pageUrl) const
+{
+#ifdef KEVA_EDITION_MIL
+    using KevaSecurity::AccessPolicy;
+    return AccessPolicy::settingsPageAllowed(kevaIsAdmin() ? AccessPolicy::Role::Administrator : AccessPolicy::Role::User, pageUrl);
+#else
+    Q_UNUSED(pageUrl)
+    return true;
 #endif
 }
 

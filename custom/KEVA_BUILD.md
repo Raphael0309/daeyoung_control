@@ -36,6 +36,41 @@ Sources: `custom/src/Security/`, login window: `custom/res/Security/LoginWindow.
   application refuses to start instead of offering setup again.
 * Policy values are in `custom/src/Security/SecurityConfig.h`.
 
+### Roles (SR-15)
+
+| | Administrator | User |
+|---|---|---|
+| Fly view | monitoring only – banner shown, guided actions hidden | full |
+| Flight commands (arm, mode, takeoff, land, RTL, goto, altitude/speed, VTOL transition, mission start …) | blocked | allowed |
+| Joystick / virtual joystick | blocked | allowed |
+| Plan Flight | hidden | allowed |
+| Vehicle Configuration | allowed | hidden |
+| Application Settings | all pages | General, Fly View, Plan View, Video, Comm Links, Maps, Remote ID, Help |
+| Account management, audit log | login window → Account Management | – |
+
+Blocked commands are refused in C++ at the single point where QGC sends
+MAVLink commands (`Vehicle::_sendMavCommandWorker`), so no QML path can
+bypass them; each refusal is written to the audit log (`COMMAND_BLOCKED`).
+Rules live in `custom/src/Security/AccessPolicy.cc`.
+
+### Idle lock
+
+After 10 minutes without keyboard/mouse/touch input a full‑screen lock
+asks for the current user's PW (failures count toward the lockout rules).
+The lock is never applied while a vehicle is armed. "Exit Application" on
+the lock screen closes the application and records the logout.
+
+### Upstream QGC files changed
+
+Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
+
+* `cmake/Git.cmake` – product version override
+* `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual
+* `src/Vehicle/Vehicle.cc` – calls it for commands, SET_MODE and manual control
+* `src/FlightDisplay/GuidedActionsController.qml` – hide/guard guided actions
+* `src/UI/MainWindow.qml` – Plan / Vehicle Configuration by role
+* `src/QmlControls/AppSettings.qml` – settings pages by role
+
 ### Resetting a development PC
 
 Delete the folder `%ProgramData%\DaeyoungMnS\DaeyoungGCS` and the registry key

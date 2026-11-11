@@ -9,6 +9,7 @@
  ****************************************************************************/
 
 #include "AuthManager.h"
+#include "IdleLockController.h"
 
 #include <QtCore/QDir>
 #include <QtCore/QTemporaryDir>
@@ -18,6 +19,7 @@
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlContext>
 #include <QtQuick/QQuickWindow>
+#include <QtGui/QWindow>
 #include <QtQuickControls2/QQuickStyle>
 #include <QtTest/QTest>
 
@@ -100,5 +102,38 @@ int main(int argc, char *argv[])
     auth.closeAdminTools();
     auth.requestPasswordChange();
     snap(QStringLiteral("change_password"));
+
+    // Idle lock screen (user session)
+    auth.cancel();
+    AuthManager userAuth(o);
+    userAuth.start();
+    userAuth.login(a2, p2);
+    userAuth.continueToApplication();
+    IdleLockController::Hooks hooks;
+    hooks.lockSuppressed = []() { return false; };
+    IdleLockController idle(&userAuth, 200, hooks);
+    idle.start();
+    QTest::qWait(1600);     // > idle limit + one check interval
+    QWindow *lockWindow = nullptr;
+    for (QWindow *w : QGuiApplication::topLevelWindows()) {
+        if (w->isVisible() && w != window) {
+            lockWindow = w;
+        }
+    }
+    if (auto *quick = qobject_cast<QQuickWindow *>(lockWindow)) {
+        quick->showNormal();
+        quick->resize(1600, 900);
+        QTest::qWait(250);
+        quick->grabWindow().save(QDir(outDir).filePath(QStringLiteral("%1_lock_screen.png").arg(++index, 2, 10, QLatin1Char('0'))));
+        userAuth.unlockSession(QStringLiteral("wrong"));
+        QTest::qWait(250);
+        quick->grabWindow().save(QDir(outDir).filePath(QStringLiteral("%1_lock_screen_failed.png").arg(++index, 2, 10, QLatin1Char('0'))));
+        userAuth.unlockSession(p2);
+        QTest::qWait(250);
+        qInfo() << "lock window after unlock visible:" << (QGuiApplication::topLevelWindows().contains(lockWindow));
+    } else {
+        qWarning() << "lock window not shown";
+        return 2;
+    }
     return 0;
 }

@@ -758,6 +758,83 @@ void AuthManager::recordLogout()
     }
 }
 
+// ---------------------------------------------------------------------------
+// Idle lock
+
+void AuthManager::lockSession(const QString &reason)
+{
+    if (!_authenticated || _sessionLocked) {
+        return;
+    }
+    _sessionLocked = true;
+    _sessionTerminated = false;
+    _lockText = QStringLiteral("%1\nEnter the PW of '%2' to continue.").arg(reason, _currentId);
+    _log(QStringLiteral("SESSION_LOCKED"), _currentId, QStringLiteral("ok"), reason);
+    _save();
+    _setMessage(QString());
+    emit sessionLockedChanged();
+}
+
+bool AuthManager::unlockSession(const QString &password)
+{
+    if (!_authenticated || !_sessionLocked || _sessionTerminated) {
+        return false;
+    }
+    Account *account = _store->find(_currentId);
+    if (!account) {
+        return false;
+    }
+    if (account->failures.locked) {
+        _sessionTerminated = true;
+        _log(QStringLiteral("SESSION_UNLOCK_REJECTED_LOCKED"), _currentId, QStringLiteral("locked"));
+        _save();
+        _lockText = _lockedMessage(account->failures.lockReason) + QStringLiteral("\nThe application will close.");
+        emit sessionLockedChanged();
+        return false;
+    }
+    if (password.isEmpty()) {
+        _setMessage(QStringLiteral("Enter your PW."));
+        return false;
+    }
+    if (!_verify(account->password, password)) {
+        account->failuresSinceLastLogin++;
+        const FailOutcome outcome = _registerFailure(account->failures);
+        _log(QStringLiteral("SESSION_UNLOCK_FAILURE"), _currentId, QStringLiteral("failed"),
+             QStringLiteral("consecutive=%1 daily=%2").arg(account->failures.consecutive).arg(account->failures.daily));
+        if (outcome.lockedNow) {
+            _log(QStringLiteral("ACCOUNT_LOCKED"), _currentId, QStringLiteral("locked"), QStringLiteral("reason=%1").arg(outcome.lockReason));
+        }
+        _save();
+        if (outcome.locked) {
+            _sessionTerminated = true;
+            _lockText = _lockedMessage(outcome.lockReason) + QStringLiteral("\nThe application will close.");
+            _setMessage(QString());
+            emit sessionLockedChanged();
+        } else {
+            _setMessage(QStringLiteral("Unlock Failed \u2013 Check your PW. (%1)")
+                            .arg(outcome.remaining == 1 ? QStringLiteral("1 attempt remaining")
+                                                        : QStringLiteral("%1 attempts remaining").arg(outcome.remaining)));
+        }
+        return false;
+    }
+    account->failures.consecutive = 0;
+    _sessionLocked = false;
+    _lockText.clear();
+    _log(QStringLiteral("SESSION_UNLOCKED"), _currentId, QStringLiteral("ok"));
+    _save();
+    _setMessage(QString());
+    emit sessionLockedChanged();
+    return true;
+}
+
+void AuthManager::requestExit()
+{
+    _log(QStringLiteral("APPLICATION_EXIT_REQUESTED"), _currentId, QStringLiteral("ok"),
+         _sessionLocked ? QStringLiteral("from lock screen") : QString());
+    _save();
+    emit exitRequested();
+}
+
 void AuthManager::cancel()
 {
     if (_authenticated) {

@@ -109,6 +109,10 @@ if(KEVA_EDITION STREQUAL "MIL")
     set(_keva_sec ${CMAKE_CURRENT_SOURCE_DIR}/src/Security)
     list(APPEND CUSTOM_SOURCES
         ${_keva_sec}/SecurityConfig.h
+        ${_keva_sec}/AccessPolicy.h
+        ${_keva_sec}/AccessPolicy.cc
+        ${_keva_sec}/IdleLockController.h
+        ${_keva_sec}/IdleLockController.cc
         ${_keva_sec}/SecurityCrypto.h
         ${_keva_sec}/SecurityCrypto.cc
         ${_keva_sec}/PasswordPolicy.h

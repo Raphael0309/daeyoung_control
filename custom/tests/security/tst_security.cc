@@ -4,6 +4,7 @@
  *
  ****************************************************************************/
 
+#include "AccessPolicy.h"
 #include "AuthManager.h"
 #include "AuditLog.h"
 #include "PasswordPolicy.h"
@@ -114,6 +115,11 @@ private slots:
     void missingStoreAfterSetupIsFatal();
     void setupMarkerBlocksSilentReset();
     void userIsNotAdmin();
+
+    // Session lock and roles
+    void sessionLockAndUnlock();
+    void sessionUnlockFailuresLockAccount();
+    void accessPolicy();
 };
 
 // ---------------------------------------------------------------------------
@@ -564,7 +570,14 @@ void TestSecurity::setupMarkerBlocksSilentReset()
 {
     QCoreApplication::setOrganizationName(QStringLiteral("KevaSecurityTest"));
     QCoreApplication::setApplicationName(QStringLiteral("tst_security"));
-    QSettings(QSettings::NativeFormat, QSettings::UserScope, QStringLiteral("KevaSecurityTest"), QStringLiteral("tst_security")).clear();
+    auto clearMarkers = []() {
+        QSettings(QSettings::NativeFormat, QSettings::UserScope, QStringLiteral("KevaSecurityTest"), QStringLiteral("tst_security")).clear();
+        QSettings machine(QSettings::NativeFormat, QSettings::SystemScope, QStringLiteral("KevaSecurityTest"), QStringLiteral("tst_security"));
+        if (machine.isWritable()) {
+            machine.clear();
+        }
+    };
+    clearMarkers();
 
     Env env;
     AuthManager::Options o = env.options();
@@ -581,7 +594,7 @@ void TestSecurity::setupMarkerBlocksSilentReset()
     b.start();
     QCOMPARE(b.stage(), QStringLiteral("fatal"));
 
-    QSettings(QSettings::NativeFormat, QSettings::UserScope, QStringLiteral("KevaSecurityTest"), QStringLiteral("tst_security")).clear();
+    clearMarkers();
 }
 
 void TestSecurity::userIsNotAdmin()
@@ -595,6 +608,76 @@ void TestSecurity::userIsNotAdmin()
     QCOMPARE(a->stage(), QStringLiteral("notice"));
     QVERIFY(!a->unlockAccount(kAdmin1));
     QVERIFY(!a->resetPassword(kAdmin1, kPwNew1, kPwNew1));
+}
+
+void TestSecurity::sessionLockAndUnlock()
+{
+    Env env;
+    auto a = env.make();
+    completeSetup(*a);
+    a->lockSession(QStringLiteral("idle"));
+    QVERIFY(!a->sessionLocked());           // nobody logged in yet
+    QVERIFY(a->login(kUser, kPwU));
+    a->continueToApplication();
+    QSignalSpy lockSpy(a.get(), &AuthManager::sessionLockedChanged);
+    a->lockSession(QStringLiteral("Session locked after 10 minutes of inactivity."));
+    QVERIFY(a->sessionLocked());
+    QCOMPARE(lockSpy.count(), 1);
+    QVERIFY(a->lockText().contains(kUser));
+    QVERIFY(!a->unlockSession(QStringLiteral("wrong")));
+    QVERIFY2(a->message().contains("2 attempts remaining"), qPrintable(a->message()));
+    QVERIFY(a->sessionLocked());
+    QVERIFY(a->unlockSession(kPwU));
+    QVERIFY(!a->sessionLocked());
+    QCOMPARE(a->store()->find(kUser)->failures.consecutive, 0);
+
+    bool locked = false, unlocked = false;
+    for (const AuditEntry &e : a->audit()->readAll(nullptr, nullptr)) {
+        locked = locked || e.type == QStringLiteral("SESSION_LOCKED");
+        unlocked = unlocked || e.type == QStringLiteral("SESSION_UNLOCKED");
+    }
+    QVERIFY(locked && unlocked);
+    QSignalSpy exitSpy(a.get(), &AuthManager::exitRequested);
+    a->requestExit();
+    QCOMPARE(exitSpy.count(), 1);
+}
+
+void TestSecurity::sessionUnlockFailuresLockAccount()
+{
+    Env env;
+    auto a = env.make();
+    completeSetup(*a);
+    QVERIFY(a->login(kUser, kPwU));
+    a->continueToApplication();
+    a->lockSession(QStringLiteral("idle"));
+    for (int i = 0; i < 3; ++i) {
+        QVERIFY(!a->unlockSession(QStringLiteral("wrong")));
+    }
+    QVERIFY(a->sessionTerminated());
+    QVERIFY(a->lockText().contains("Account has been locked"));
+    QVERIFY(a->store()->find(kUser)->failures.locked);
+    QVERIFY(!a->unlockSession(kPwU));       // correct PW no longer helps
+    QVERIFY(a->sessionLocked());
+}
+
+void TestSecurity::accessPolicy()
+{
+    using R = AccessPolicy::Role;
+    QVERIFY(!AccessPolicy::canSendFlightCommands(R::Administrator));
+    QVERIFY(AccessPolicy::canSendFlightCommands(R::User));
+    QVERIFY(!AccessPolicy::canPlanFlights(R::Administrator));
+    QVERIFY(AccessPolicy::canConfigureVehicle(R::Administrator));
+    QVERIFY(!AccessPolicy::canConfigureVehicle(R::User));
+    for (int cmd : { 20, 21, 22, 176, 178, 186, 192, 300, 400, 3000 }) {
+        QVERIFY2(AccessPolicy::isFlightCommand(cmd), qPrintable(QString::number(cmd)));
+    }
+    for (int cmd : { 241 /* PREFLIGHT_CALIBRATION */, 246 /* REBOOT */, 512 /* REQUEST_MESSAGE */, 2000 /* IMAGE_START_CAPTURE */, 1000 /* GIMBAL_PITCHYAW */ }) {
+        QVERIFY2(!AccessPolicy::isFlightCommand(cmd), qPrintable(QString::number(cmd)));
+    }
+    QVERIFY(AccessPolicy::settingsPageAllowed(R::User, QStringLiteral("qrc:/qml/QGroundControl/AppSettings/MapSettings.qml")));
+    QVERIFY(!AccessPolicy::settingsPageAllowed(R::User, QStringLiteral("qrc:/qml/QGroundControl/AppSettings/PX4LogTransferSettings.qml")));
+    QVERIFY(!AccessPolicy::settingsPageAllowed(R::User, QStringLiteral("qrc:/qml/QGroundControl/Controls/AppMessages.qml")));
+    QVERIFY(AccessPolicy::settingsPageAllowed(R::Administrator, QStringLiteral("qrc:/qml/QGroundControl/Controls/AppMessages.qml")));
 }
 
 QTEST_GUILESS_MAIN(TestSecurity)

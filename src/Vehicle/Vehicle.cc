@@ -1659,6 +1659,11 @@ void Vehicle::setFlightMode(const QString& flightMode)
     uint8_t     base_mode;
     uint32_t    custom_mode;
 
+    // KEVA custom build: also covers the SET_MODE message path below
+    if (!QGCCorePlugin::instance()->vehicleControlAllowed(MAV_CMD_DO_SET_MODE)) {
+        return;
+    }
+
     if (setFlightModeCustom(flightMode, &base_mode, &custom_mode)) {
         SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
         if (!sharedLink) {
@@ -2663,6 +2668,20 @@ void Vehicle::_sendMavCommandWorker(
             qgcApp()->showAppMessage(tr("Unable to send command: %1.").arg(compIdAll ? tr("Internal error - MAV_COMP_ID_ALL not supported") : tr("Waiting on previous response to same command.")));
         }
 
+        return;
+    }
+
+    // KEVA custom build: role based command veto (see QGCCorePlugin::vehicleControlAllowed)
+    if (!QGCCorePlugin::instance()->vehicleControlAllowed(command)) {
+        qCDebug(VehicleLog) << "_sendMavCommandWorker: command blocked by core plugin" << command;
+        if (ackHandlerInfo && ackHandlerInfo->resultHandler) {
+            mavlink_command_ack_t ack = {};
+            ack.command = command;
+            ack.result = MAV_RESULT_DENIED;
+            (*ackHandlerInfo->resultHandler)(ackHandlerInfo->resultHandlerData, targetCompId, ack, MavCmdResultCommandResultOnly);
+        } else {
+            emit mavCommandResult(_id, targetCompId, command, MAV_RESULT_DENIED, MavCmdResultCommandResultOnly);
+        }
         return;
     }
 
@@ -3884,6 +3903,11 @@ void Vehicle::clearAllParamMapRC(void)
 
 void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, float thrust, quint16 buttons)
 {
+    // KEVA custom build: role based veto of manual control (joystick and virtual joystick)
+    if (!QGCCorePlugin::instance()->vehicleControlAllowed(QGCCorePlugin::kVehicleControlManual)) {
+        return;
+    }
+
     SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
     if (!sharedLink) {
         qCDebug(VehicleLog)<< "sendJoystickDataThreadSafe: primary link gone!";
