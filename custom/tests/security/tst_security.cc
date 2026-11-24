@@ -12,7 +12,9 @@
 #include "SecurityCrypto.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
 #include <QtCore/QSettings>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QSignalSpy>
@@ -120,6 +122,11 @@ private slots:
     void sessionLockAndUnlock();
     void sessionUnlockFailuresLockAccount();
     void accessPolicy();
+
+    // Storage without delete rights
+    void storeAlternatesCopiesInPlace();
+    void storeFallsBackToOlderCopy();
+    void restoredOldAccountDatabaseIsReported();
 };
 
 // ---------------------------------------------------------------------------
@@ -557,6 +564,7 @@ void TestSecurity::missingStoreAfterSetupIsFatal()
         completeSetup(*a);
     }
     QVERIFY(QFile::remove(env.dir.filePath("accounts.dat")));
+    QFile::remove(env.dir.filePath("accounts.alt"));
     auto b = env.make();
     QCOMPARE(b->stage(), QStringLiteral("fatal"));
     QVERIFY(!b->createAccount(kAdmin1, kPwA1, kPwA1));
@@ -589,6 +597,7 @@ void TestSecurity::setupMarkerBlocksSilentReset()
     }
     // Remove every file: the registry marker still says setup was done
     QVERIFY(QFile::remove(env.dir.filePath("accounts.dat")));
+    QFile::remove(env.dir.filePath("accounts.alt"));
     QVERIFY(QFile::remove(env.dir.filePath("audit.log")));
     AuthManager b(o);
     b.start();
@@ -678,6 +687,80 @@ void TestSecurity::accessPolicy()
     QVERIFY(!AccessPolicy::settingsPageAllowed(R::User, QStringLiteral("qrc:/qml/QGroundControl/AppSettings/PX4LogTransferSettings.qml")));
     QVERIFY(!AccessPolicy::settingsPageAllowed(R::User, QStringLiteral("qrc:/qml/QGroundControl/Controls/AppMessages.qml")));
     QVERIFY(AccessPolicy::settingsPageAllowed(R::Administrator, QStringLiteral("qrc:/qml/QGroundControl/Controls/AppMessages.qml")));
+}
+
+void TestSecurity::storeAlternatesCopiesInPlace()
+{
+    Env env;
+    auto a = env.make();
+    completeSetup(*a);
+    for (int i = 0; i < 4; ++i) {
+        a->login(kUser, QStringLiteral("bad"));
+        a->recordLogout();
+        a = env.make();
+        QVERIFY(a->login(kUser, kPwU));
+        a->recordLogout();
+        a = env.make();
+    }
+    // Only the two copies and the audit log: nothing is created and renamed
+    QStringList files = QDir(env.dir.path()).entryList(QDir::Files | QDir::Hidden);
+    files.sort();
+    QCOMPARE(files, QStringList({ QStringLiteral("accounts.alt"), QStringLiteral("accounts.dat"), QStringLiteral("audit.log") }));
+}
+
+void TestSecurity::storeFallsBackToOlderCopy()
+{
+    Env env;
+    {
+        auto a = env.make();
+        completeSetup(*a);
+        QVERIFY(a->login(kUser, kPwU));
+        a->recordLogout();
+    }
+    // Damage the newest copy (as if the PC lost power during the write)
+    const QString newest = QFileInfo(env.dir.filePath("accounts.dat")).lastModified() >= QFileInfo(env.dir.filePath("accounts.alt")).lastModified()
+                               ? env.dir.filePath("accounts.dat") : env.dir.filePath("accounts.alt");
+    QFile f(newest);
+    QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    f.write("KEVAACC1garbage");
+    f.close();
+    auto b = env.make();
+    QCOMPARE(b->stage(), QStringLiteral("login"));
+    QVERIFY(b->login(kUser, kPwU));
+}
+
+void TestSecurity::restoredOldAccountDatabaseIsReported()
+{
+    Env env;
+    QByteArray savedDat, savedAlt;
+    {
+        auto a = env.make();
+        completeSetup(*a);
+        QFile d(env.dir.filePath("accounts.dat"));
+        QFile t(env.dir.filePath("accounts.alt"));
+        QVERIFY(d.open(QIODevice::ReadOnly) && t.open(QIODevice::ReadOnly));
+        savedDat = d.readAll();
+        savedAlt = t.readAll();
+        // The user gets locked out afterwards
+        for (int i = 0; i < 3; ++i) {
+            a->login(kUser, QStringLiteral("bad"));
+        }
+        QVERIFY(a->store()->find(kUser)->failures.locked);
+    }
+    // Someone copies the old files back to undo the lockout
+    for (const auto &pair : { qMakePair(QStringLiteral("accounts.dat"), savedDat), qMakePair(QStringLiteral("accounts.alt"), savedAlt) }) {
+        QFile f(env.dir.filePath(pair.first));
+        QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(pair.second);
+    }
+    auto b = env.make();
+    QVERIFY(b->login(kAdmin1, kPwA1));
+    QVERIFY2(b->infoText().contains("older than the audit log"), qPrintable(b->infoText()));
+    bool alert = false;
+    for (const AuditEntry &e : b->audit()->readAll(nullptr, nullptr)) {
+        alert = alert || (e.type == QStringLiteral("INTEGRITY_ALERT") && e.detail.contains("older than the audit log"));
+    }
+    QVERIFY(alert);
 }
 
 QTEST_GUILESS_MAIN(TestSecurity)

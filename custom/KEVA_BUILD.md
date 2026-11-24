@@ -65,6 +65,7 @@ the lock screen closes the application and records the logout.
 Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
 
 * `cmake/Git.cmake` – product version override
+* `cmake/Install.cmake` – installer script / file name override
 * `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual
 * `src/Vehicle/Vehicle.cc` – calls it for commands, SET_MODE and manual control
 * `src/FlightDisplay/GuidedActionsController.qml` – hide/guard guided actions
@@ -91,9 +92,42 @@ On Windows these tests exercise the real CNG and DPAPI code paths.
 `login_preview --interactive` opens the login window with a throw‑away account
 store; `login_preview <folder>` saves a screenshot of every stage.
 
-## Still to do (installer)
+## Windows installer
 
-* Create `%ProgramData%\DaeyoungMnS\DaeyoungGCS\Security` with write access for
-  standard users and no delete right (SR‑08).
-* Register the event log source and write the setup marker under HKLM.
-* Keep the security folder on uninstall (MIL).
+`custom/deploy/windows/keva_installer.nsi.in` is turned into
+`<build>/keva_installer.nsi` for the selected edition and used instead of QGC's
+script (hook in `cmake/Install.cmake`). The output is
+`DaeyoungGCS-<version>-setup.exe` (MIL) or `DaeyoungGCS_CE-<version>-setup.exe` (COM).
+
+Both editions: product name in the window/installer/start menu, install folder
+`C:\Program Files\<product name>`, version and publisher in "Apps & features",
+and uninstall removes only that edition's settings (the two editions share the
+`DAEYOUNG_MnS` settings folder).
+
+MIL only:
+
+* Creates `%ProgramData%\DaeyoungMnS\DaeyoungGCS\Security` with this ACL (SR-08):
+  * SYSTEM, Administrators: full control
+  * Users and OWNER RIGHTS: read, create, write, append – **no delete, no
+    permission change** (OWNER RIGHTS stops the operator who created a file
+    from changing its permissions and then deleting it)
+* Registers the event log source "Daeyoung Ground Control" so Event Viewer
+  shows the audit messages as text.
+* Uninstall keeps the security folder and tells the user only a Windows
+  administrator can remove it.
+
+Because users cannot delete files there, the account database is kept as two
+copies (`accounts.dat`, `accounts.alt`) overwritten alternately in place
+instead of write‑then‑rename. If the newest copy is damaged the other is used.
+If the account files are replaced by an older copy (e.g. to undo a lockout),
+the gap to the audit log is detected, recorded as `INTEGRITY_ALERT` and shown
+to administrators.
+
+### Checking the installed system
+
+1. Install `DaeyoungGCS-1.0.1-setup.exe`, sign in to Windows as a standard user.
+2. Start the application and log in: accounts are created and saved.
+3. In Explorer, try to delete a file in `C:\ProgramData\DaeyoungMnS\DaeyoungGCS\Security`:
+   access is denied (an administrator account gets a UAC prompt instead).
+4. Event Viewer → Windows Logs → Application → source "Daeyoung Ground Control":
+   login records are readable text.

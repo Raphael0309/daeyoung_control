@@ -175,11 +175,18 @@ void AuthManager::_checkAuditIntegrity()
         problems << QStringLiteral("Audit log is shorter than expected (expected record %1, found %2).")
                         .arg(_store->auditSeq).arg(_audit->lastSeq());
     }
+    if (_audit->lastSeq() - _store->auditSeq > kAccountStoreLagTolerance) {
+        // Every account change is saved right after its audit record, so a large gap means
+        // the account database was replaced by an older copy (e.g. to undo a lockout).
+        problems << QStringLiteral("Account database is older than the audit log (record %1 vs %2): it may have been restored from an old copy.")
+                        .arg(_store->auditSeq).arg(_audit->lastSeq());
+    }
     if (_audit->fileSize() > kAuditLogWarnBytes) {
         problems << QStringLiteral("Audit log is larger than %1 MB. Export and archive it.").arg(kAuditLogWarnBytes / (1024 * 1024));
     }
     _auditWarning = problems.join(QLatin1Char('\n'));
-    if (!_audit->chainValid() || _store->auditSeq > _audit->lastSeq()) {
+    if (!_audit->chainValid() || _store->auditSeq > _audit->lastSeq() ||
+        _audit->lastSeq() - _store->auditSeq > kAccountStoreLagTolerance) {
         _log(QStringLiteral("INTEGRITY_ALERT"), QString(), QStringLiteral("audit log"), problems.join(QStringLiteral(" ")));
     }
 }
@@ -825,6 +832,14 @@ bool AuthManager::unlockSession(const QString &password)
     _setMessage(QString());
     emit sessionLockedChanged();
     return true;
+}
+
+void AuthManager::recordEvent(const QString &type, const QString &result, const QString &detail)
+{
+    _log(type, _currentId, result, detail);
+    if (_store->fileExists() || !_store->accounts().isEmpty()) {
+        _save();
+    }
 }
 
 void AuthManager::requestExit()

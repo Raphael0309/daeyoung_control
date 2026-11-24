@@ -181,9 +181,8 @@ bool CustomPlugin::vehicleControlAllowed(int command)
     if (!_lastDeniedNotice.isValid() || _lastDeniedNotice.elapsed() > 3000) {
         _lastDeniedNotice.start();
         qgcApp()->showAppMessage(tr("Administrator accounts cannot send flight commands."));
-        if (_auth && _auth->audit()) {
-            _auth->audit()->append(QStringLiteral("COMMAND_BLOCKED"), _auth->currentUser(), QStringLiteral("denied"),
-                                   QStringLiteral("MAV_CMD %1").arg(command));
+        if (_auth) {
+            _auth->recordEvent(QStringLiteral("COMMAND_BLOCKED"), QStringLiteral("denied"), QStringLiteral("MAV_CMD %1").arg(command));
         }
     }
     return false;

@@ -48,6 +48,9 @@ constexpr int kRecoveryCodeGroupLength  = 4;
 
 // Audit log
 constexpr qint64 kAuditLogWarnBytes     = 20 * 1024 * 1024;
+// Audit records allowed without a matching account database save (start-up errors);
+// a larger gap means the account database was replaced by an older copy.
+constexpr qint64 kAccountStoreLagTolerance = 3;
 
 // Idle lock (applied by the main window, not while flying)
 constexpr int kIdleLockMinutes          = 10;

@@ -126,6 +126,9 @@ public:
     Q_INVOKABLE bool unlockSession(const QString &password);
     Q_INVOKABLE void requestExit();
 
+    /// Writes an audit record for the current session and keeps the account database in step.
+    void recordEvent(const QString &type, const QString &result, const QString &detail);
+
     // For tests and integration
     AccountStore *store() { return _store.get(); }
     AuditLog *audit() { return _audit.get(); }

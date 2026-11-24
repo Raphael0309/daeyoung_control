@@ -77,7 +77,8 @@ public:
     explicit AccountStore(const QString &directory);
 
     QString directory() const { return _directory; }
-    QString filePath() const;
+    /// The account database is kept as two alternately written copies (slot 0 / 1).
+    QString filePath(int slot = 0) const;
     bool fileExists() const;
 
     bool load(QString *error);
@@ -103,7 +104,11 @@ public:
     QDateTime initializedAtUtc;
 
 private:
+    bool _readSlot(int slot, QJsonObject *root, QString *error) const;
+
     QString _directory;
+    qint64 _saveSeq = 0;
+    int _currentSlot = -1;
     QList<Account> _accounts;
     QHash<QString, FailureCounter> _unknownIds;
 };

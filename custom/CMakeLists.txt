@@ -135,6 +135,15 @@ else()
     message(STATUS "KEVA: security module not included (commercial edition)")
 endif()
 
+# Windows installer: edition specific NSIS script (see custom/deploy/windows/keva_installer.nsi.in)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/deploy/windows/keva_installer.nsi.in
+    ${CMAKE_BINARY_DIR}/keva_installer.nsi
+    @ONLY
+)
+set(QGC_WINDOWS_INSTALLER_SCRIPT_OVERRIDE ${CMAKE_BINARY_DIR}/keva_installer.nsi CACHE INTERNAL "" FORCE)
+set(QGC_WINDOWS_INSTALLER_NAME_OVERRIDE ${QGC_APP_NAME}-${KEVA_PRODUCT_VERSION}-setup.exe CACHE INTERNAL "" FORCE)
+
 set(CUSTOM_SOURCES ${CUSTOM_SOURCES} CACHE INTERNAL "" FORCE)
 set(CUSTOM_LIBRARIES ${_keva_libraries} CACHE INTERNAL "" FORCE)
 set(CUSTOM_INCLUDE_DIRECTORIES ${_keva_include_dirs} CACHE INTERNAL "" FORCE)

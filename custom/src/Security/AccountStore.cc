@@ -13,13 +13,15 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
-#include <QtCore/QSaveFile>
 
 namespace KevaSecurity {
 
 namespace {
 
-const QString kFileName = QStringLiteral("accounts.dat");
+// Two copies written alternately and in place: the security folder grants
+// standard users no delete right, so write-temp-then-rename is not possible,
+// and a crash during a write still leaves the other copy intact.
+const QString kSlotFiles[2] = { QStringLiteral("accounts.dat"), QStringLiteral("accounts.alt") };
 const QByteArray kFileMagic = QByteArrayLiteral("KEVAACC1");
 constexpr int kFormatVersion = 1;
 
@@ -137,14 +139,14 @@ AccountStore::AccountStore(const QString &directory)
 {
 }
 
-QString AccountStore::filePath() const
+QString AccountStore::filePath(int slot) const
 {
-    return QDir(_directory).filePath(kFileName);
+    return QDir(_directory).filePath(kSlotFiles[slot == 1 ? 1 : 0]);
 }
 
 bool AccountStore::fileExists() const
 {
-    return QFile::exists(filePath());
+    return QFile::exists(filePath(0)) || QFile::exists(filePath(1));
 }
 
 Account *AccountStore::find(const QString &id)
@@ -186,46 +188,73 @@ FailureCounter &AccountStore::unknownIdCounter(const QString &id)
     return _unknownIds[id];
 }
 
-bool AccountStore::load(QString *error)
+bool AccountStore::_readSlot(int slot, QJsonObject *root, QString *error) const
 {
-    QFile file(filePath());
+    QFile file(filePath(slot));
+    if (!file.exists()) {
+        *error = QString();
+        return false;
+    }
     if (!file.open(QIODevice::ReadOnly)) {
-        if (error) {
-            *error = QStringLiteral("Cannot open the account database.");
-        }
+        *error = QStringLiteral("Cannot open the account database.");
         return false;
     }
     const QByteArray raw = file.readAll();
     file.close();
     if (!raw.startsWith(kFileMagic)) {
-        if (error) {
-            *error = QStringLiteral("The account database is not in a recognised format.");
-        }
+        *error = QStringLiteral("The account database is not in a recognised format.");
         return false;
     }
     bool ok = false;
     const QByteArray plain = SecurityCrypto::unprotect(raw.mid(kFileMagic.size()), &ok);
     if (!ok) {
-        if (error) {
-            *error = QStringLiteral("The account database could not be decrypted on this PC or has been modified.");
-        }
+        *error = QStringLiteral("The account database could not be decrypted on this PC or has been modified.");
         return false;
     }
     QJsonParseError parseError;
     const QJsonDocument doc = QJsonDocument::fromJson(plain, &parseError);
     if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+        *error = QStringLiteral("The account database is damaged.");
+        return false;
+    }
+    if (doc.object().value(QStringLiteral("format")).toInt() != kFormatVersion) {
+        *error = QStringLiteral("The account database version is not supported.");
+        return false;
+    }
+    *root = doc.object();
+    return true;
+}
+
+bool AccountStore::load(QString *error)
+{
+    // Use the newest copy that decrypts and parses.
+    QJsonObject best;
+    int bestSlot = -1;
+    qint64 bestSeq = -1;
+    QString firstError;
+    for (int slot = 0; slot < 2; ++slot) {
+        QJsonObject candidate;
+        QString slotError;
+        if (_readSlot(slot, &candidate, &slotError)) {
+            const qint64 seq = static_cast<qint64>(candidate.value(QStringLiteral("saveSeq")).toDouble());
+            if (seq > bestSeq) {
+                best = candidate;
+                bestSeq = seq;
+                bestSlot = slot;
+            }
+        } else if (firstError.isEmpty() && !slotError.isEmpty()) {
+            firstError = slotError;
+        }
+    }
+    if (bestSlot < 0) {
         if (error) {
-            *error = QStringLiteral("The account database is damaged.");
+            *error = firstError.isEmpty() ? QStringLiteral("Cannot open the account database.") : firstError;
         }
         return false;
     }
-    const QJsonObject root = doc.object();
-    if (root.value(QStringLiteral("format")).toInt() != kFormatVersion) {
-        if (error) {
-            *error = QStringLiteral("The account database version is not supported.");
-        }
-        return false;
-    }
+    const QJsonObject &root = best;
+    _saveSeq = bestSeq;
+    _currentSlot = bestSlot;
 
     _accounts.clear();
     for (const QJsonValue &v : root.value(QStringLiteral("accounts")).toArray()) {
@@ -263,6 +292,7 @@ bool AccountStore::save(QString *error)
     root[QStringLiteral("auditSeq")] = static_cast<double>(auditSeq);
     root[QStringLiteral("auditHead")] = auditHead;
     root[QStringLiteral("initialized")] = toIso(initializedAtUtc);
+    root[QStringLiteral("saveSeq")] = static_cast<double>(_saveSeq + 1);
 
     bool ok = false;
     const QByteArray blob = SecurityCrypto::protect(QJsonDocument(root).toJson(QJsonDocument::Compact), &ok);
@@ -279,21 +309,26 @@ bool AccountStore::save(QString *error)
         }
         return false;
     }
-    QSaveFile file(filePath());
-    if (!file.open(QIODevice::WriteOnly)) {
+    // Overwrite the older copy in place (needs write, not delete, permission).
+    const int target = (_currentSlot == 0) ? 1 : 0;
+    QFile file(filePath(target));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         if (error) {
             *error = QStringLiteral("Cannot write the account database: %1").arg(file.errorString());
         }
         return false;
     }
-    file.write(kFileMagic);
-    file.write(blob);
-    if (!file.commit()) {
+    const QByteArray data = kFileMagic + blob;
+    const bool written = file.write(data) == data.size() && file.flush();
+    file.close();
+    if (!written || file.error() != QFileDevice::NoError) {
         if (error) {
             *error = QStringLiteral("Cannot save the account database: %1").arg(file.errorString());
         }
         return false;
     }
+    _saveSeq++;
+    _currentSlot = target;
     return true;
 }
 
