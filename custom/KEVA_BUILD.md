@@ -66,6 +66,8 @@ Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
 
 * `cmake/Git.cmake` – product version override
 * `cmake/Install.cmake` – installer script / file name override
+* `src/MAVLink/LibEvents/CMakeLists.txt` – libevents pinned to `077677a`
+  (upstream "main" no longer builds against QGC 5.0's MAVLink headers)
 * `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual
 * `src/Vehicle/Vehicle.cc` – calls it for commands, SET_MODE and manual control
 * `src/FlightDisplay/GuidedActionsController.qml` – hide/guard guided actions
