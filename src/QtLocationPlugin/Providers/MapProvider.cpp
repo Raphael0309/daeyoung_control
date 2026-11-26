@@ -28,7 +28,12 @@ MapProvider::MapProvider(
     , _imageFormat(imageFormat)
     , _averageSize(averageSize)
     , _mapStyle(mapStyle)
+#ifdef KEVA_FORCE_ENGLISH
+    // KEVA custom build: map labels in English, like the rest of the UI
+    , _language(QStringLiteral("en"))
+#else
     , _language(!QLocale::system().uiLanguages().isEmpty() ? QLocale::system().uiLanguages().constFirst() : "en")
+#endif
     , _mapId(_mapIdIndex++)
 {
     // qCDebug(MapProviderLog) << Q_FUNC_INFO << this << _mapId;

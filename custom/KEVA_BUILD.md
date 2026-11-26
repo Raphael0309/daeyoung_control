@@ -70,6 +70,21 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
   * Wind dir./spd. with 8 / 12 m/s colour steps.
   * Dist. to home; Dist. to GCS only with an NMEA GPS configured for the ground
     station (AutoConnect NMEA port), otherwise "--".
+  * Target dials (click Alt. (Rel) / Air Spd. when flying; `KevaSetpointPopup.qml`,
+    `KevaSetpointDial.qml`): multi-turn dial, 15 deg per step, mouse wheel / arrow
+    keys one step, tap the number to type it, slide to confirm.
+    Altitude 10-3000 m in 10 m steps (`CustomPlugin::kevaSetTargetAltitude`):
+    pauses (Hold) and changes altitude, so a running mission / takeoff stops,
+    as the confirm text says. Airspeed in 1 m/s steps within FW_AIRSPD_MIN..MAX,
+    fixed-wing flight only (`kevaSetTargetAirspeed`). Both are written to the
+    audit log (ALTITUDE_COMMAND / AIRSPEED_COMMAND) in the MIL edition and are
+    unavailable to administrator accounts.
+* Fixed layout: the main view (map or video) ends above the bottom strip
+  (`PipView.fullItemBottomInset`, set from `FlyViewCustomLayer.mainViewBottomInset`;
+  0 in full screen video). The strip is black; map insets no longer reserve it.
+  Video default fit is "No Crop" (whole picture, black bars).
+* Map labels in English (`KEVA_FORCE_ENGLISH` in `MapProvider.cpp`, Google `hl=en`).
+  Tiles already in the cache keep their old labels until the cache is cleared.
 
 ### Fly view toolbar (UI deck slides 7-8)
 
@@ -136,10 +151,13 @@ Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
 * `cmake/Install.cmake` – installer script / file name override
 * `src/QmlControls/ScreenToolsController.cc` – product font (`KEVA_FONT_FAMILY`, Arial)
 * `src/QGCApplication.cc` – English UI (`KEVA_FORCE_ENGLISH`)
-* `src/FlightDisplay/FlyView.qml` – video window shown even without a video source
+* `src/FlightDisplay/FlyView.qml` – video window shown even without a video source;
+  main view and 3D viewer end above the bottom strip
 * `src/FlightDisplay/FlyViewVideo.qml` – "disconnected" display without a video source
 * `src/QmlControls/PipView.qml` – click swaps (after the double-click interval),
-  double-click opens a separate window
+  double-click opens a separate window; `fullItemBottomInset`
+* `src/QmlControls/PipState.qml` – full view bottom margin = `fullItemBottomInset`
+* `src/QtLocationPlugin/Providers/MapProvider.cpp` – map label language English
 * `src/MAVLink/LibEvents/CMakeLists.txt` – libevents pinned to `077677a`
   (upstream "main" no longer builds against QGC 5.0's MAVLink headers)
 * `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual

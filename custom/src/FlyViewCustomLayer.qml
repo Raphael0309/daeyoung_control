@@ -5,6 +5,9 @@
  * Bottom strip, left to right: video window | HUD panel | Status Data panel.
  *
  * - The strip height is 30% of the Fly view (about 310 px at 1920x1080).
+ * - The main view (map or video) ends above the strip (mainViewBottomInset,
+ *   used by FlyView.qml), so the panels never cover the picture. The strip
+ *   itself is black; in full screen video everything is hidden as in QGC.
  * - The video window is QGC's picture-in-picture view, always shown (black
  *   "Video Transmission Disconnected" without video). Click swaps it with the
  *   map, double-click or the top-left button opens it in a separate window,
@@ -33,6 +36,8 @@ Item {
     property var parentToolInsets                       // These insets tell you what screen real estate is available for positioning the controls in your overlay
     property var totalToolInsets:   _totalToolInsets    // The insets updated for the custom overlay additions
     property var mapControl
+    // Space below the main view kept for the bottom strip (read by FlyView.qml)
+    readonly property real mainViewBottomInset: _stripInset
 
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property real   _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
@@ -69,16 +74,28 @@ Item {
         id:                     _totalToolInsets
         leftEdgeTopInset:       parentToolInsets.leftEdgeTopInset
         leftEdgeCenterInset:    parentToolInsets.leftEdgeCenterInset
-        leftEdgeBottomInset:    parentToolInsets.leftEdgeBottomInset
+        // The video window sits in the strip, below the map: nothing to keep free on the map
+        leftEdgeBottomInset:    0
         rightEdgeTopInset:      parentToolInsets.rightEdgeTopInset
         rightEdgeCenterInset:   parentToolInsets.rightEdgeCenterInset
         rightEdgeBottomInset:   parentToolInsets.rightEdgeBottomInset
         topEdgeLeftInset:       parentToolInsets.topEdgeLeftInset
         topEdgeCenterInset:     parentToolInsets.topEdgeCenterInset
         topEdgeRightInset:      parentToolInsets.topEdgeRightInset
-        bottomEdgeLeftInset:    Math.max(parentToolInsets.bottomEdgeLeftInset, _stripInset)
-        bottomEdgeCenterInset:  Math.max(parentToolInsets.bottomEdgeCenterInset, _stripInset)
-        bottomEdgeRightInset:   Math.max(parentToolInsets.bottomEdgeRightInset, _stripInset)
+        // The map ends above the strip, so nothing covers its bottom edge
+        bottomEdgeLeftInset:    0
+        bottomEdgeCenterInset:  0
+        bottomEdgeRightInset:   0
+    }
+
+    // Black strip background behind the panels and the video window
+    Rectangle {
+        anchors.left:   parent.left
+        anchors.right:  parent.right
+        anchors.bottom: parent.bottom
+        height:         _stripInset
+        color:          _kevaColors.black
+        z:              -1
     }
 
     KevaHudPanel {

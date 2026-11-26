@@ -55,6 +55,12 @@ Item {
                 anchors.right:  pipView.parent.right
             }
 
+            // KEVA custom build: the main view ends above the bottom panel strip
+            PropertyChanges {
+                target:                 _viewControl
+                anchors.bottomMargin:   pipView.fullItemBottomInset
+            }
+
             ParentChange {
                 target: _viewControl
                 parent: pipView.parent

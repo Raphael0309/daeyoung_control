@@ -25,6 +25,7 @@ Item {
     property var    item2:                  null    // Optional, may come and go
     property string item1IsFullSettingsKey          // Settings key to save whether item1 was saved in full mode
     property bool   show:                   true
+    property real   fullItemBottomInset:    0       // KEVA custom build: space kept free below the main (full) view
 
     readonly property string _pipExpandedSettingsKey: "IsPIPVisible"
 

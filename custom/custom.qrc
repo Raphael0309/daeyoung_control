@@ -45,6 +45,8 @@
         <file alias="KevaHudAttitude.qml">res/Custom/qml/KevaFlyView/KevaHudAttitude.qml</file>
         <file alias="KevaHudHeadingTape.qml">res/Custom/qml/KevaFlyView/KevaHudHeadingTape.qml</file>
         <file alias="KevaHudTape.qml">res/Custom/qml/KevaFlyView/KevaHudTape.qml</file>
+        <file alias="KevaSetpointDial.qml">res/Custom/qml/KevaFlyView/KevaSetpointDial.qml</file>
+        <file alias="KevaSetpointPopup.qml">res/Custom/qml/KevaFlyView/KevaSetpointPopup.qml</file>
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/FlightDisplay">
         <file alias="FlyViewBottomRightRowLayout.qml">res/Custom/qml/QGroundControl/FlightDisplay/FlyViewBottomRightRowLayout.qml</file>

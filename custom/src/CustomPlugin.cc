@@ -39,6 +39,12 @@ constexpr int    kKevaMcOutputs[4]      = { 1, 2, 3, 4 };
 constexpr double kKevaPwmMin            = 1000.0;   // 0 %
 constexpr double kKevaPwmMax            = 2000.0;   // 100 %
 constexpr qint64 kKevaMotorStaleMs      = 3000;
+
+// Status Data panel target dials (UI deck slide 11, review decisions)
+constexpr double kKevaAltMin            = 10.0;     // m, relative to home
+constexpr double kKevaAltMax            = 3000.0;
+constexpr double kKevaAltStep           = 10.0;
+constexpr double kKevaAirspeedStep      = 1.0;      // m/s
 }
 
 #ifdef KEVA_EDITION_MIL
@@ -405,6 +411,9 @@ bool CustomPlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaD
     if (settingsGroup == QLatin1String(VideoSettings::settingsGroup)) {
         if (metaData.name() == QLatin1String(VideoSettings::rtspTimeoutName)) {
             metaData.setRawDefaultValue(4);
+        } else if (metaData.name() == QLatin1String(VideoSettings::videoFitName)) {
+            // Whole picture, never cropped (black bars where the aspect ratio differs)
+            metaData.setRawDefaultValue(3);     // "No Crop"
         }
         return parentResult;
     }
@@ -592,4 +601,61 @@ QString CustomPlugin::kevaMgrs(const QGeoCoordinate &coord) const
     static const QRegularExpression zoneSquare(QStringLiteral("^(\\d{1,2}[C-X])([A-Z]{2}) "));
     mgrs.replace(zoneSquare, QStringLiteral("\\1 \\2 "));
     return mgrs;
+}
+
+QVariantMap CustomPlugin::kevaSetpointLimits() const
+{
+    return {
+        { QStringLiteral("altMin"),         kKevaAltMin },
+        { QStringLiteral("altMax"),         kKevaAltMax },
+        { QStringLiteral("altStep"),        kKevaAltStep },
+        { QStringLiteral("airspeedStep"),   kKevaAirspeedStep },
+    };
+}
+
+bool CustomPlugin::kevaSetTargetAltitude(double altitudeRel)
+{
+    Vehicle *vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle || !vehicle->flying() || !kevaCanControlVehicle() || qIsNaN(altitudeRel)) {
+        return false;
+    }
+    const double current = vehicle->altitudeRelative()->rawValue().toDouble();
+    if (qIsNaN(current)) {
+        return false;
+    }
+    const double target = qBound(kKevaAltMin, std::round(altitudeRel / kKevaAltStep) * kKevaAltStep, kKevaAltMax);
+    const QString mode = vehicle->flightMode();
+    // PX4 cannot change only the altitude of a running mission: pause (Hold) first, then climb / descend
+    vehicle->guidedModeChangeAltitude(target - current, true /* pauseVehicle */);
+#ifdef KEVA_EDITION_MIL
+    if (_auth) {
+        _auth->recordEvent(QStringLiteral("ALTITUDE_COMMAND"), QStringLiteral("sent"),
+                           QStringLiteral("target %1 m rel (current %2 m), mode %3").arg(target, 0, 'f', 0).arg(current, 0, 'f', 1).arg(mode));
+    }
+#endif
+    return true;
+}
+
+bool CustomPlugin::kevaSetTargetAirspeed(double airspeed)
+{
+    Vehicle *vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle || !vehicle->flying() || !kevaCanControlVehicle() || qIsNaN(airspeed)) {
+        return false;
+    }
+    // Multirotor flight has no airspeed target
+    const bool fixedWingFlight = vehicle->vtol() ? vehicle->vtolInFwdFlight() : vehicle->fixedWing();
+    const double minSpeed = vehicle->minimumEquivalentAirspeed();
+    const double maxSpeed = vehicle->maximumEquivalentAirspeed();
+    if (!fixedWingFlight || qIsNaN(minSpeed) || qIsNaN(maxSpeed) || maxSpeed < minSpeed) {
+        return false;
+    }
+    const double target = qBound(minSpeed, std::round(airspeed / kKevaAirspeedStep) * kKevaAirspeedStep, maxSpeed);
+    vehicle->guidedModeChangeEquivalentAirspeedMetersSecond(target);
+#ifdef KEVA_EDITION_MIL
+    if (_auth) {
+        _auth->recordEvent(QStringLiteral("AIRSPEED_COMMAND"), QStringLiteral("sent"),
+                           QStringLiteral("target %1 m/s, mode %2").arg(target, 0, 'f', 0).arg(vehicle->flightMode()));
+    }
+#endif
+    return true;
 }

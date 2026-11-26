@@ -81,6 +81,8 @@ class CustomPlugin : public QGCCorePlugin
     // Status Data panel Thr%: [FW, M1, M2, M3, M4] output in percent (NaN = unknown),
     // from SERVO_OUTPUT_RAW of the active vehicle. Empty when no data for 3 s.
     Q_PROPERTY(QVariantList kevaMotorOutputs    READ kevaMotorOutputs           NOTIFY kevaMotorOutputsChanged)
+    // Status Data panel target dials: altMin / altMax / altStep (m), airspeedStep (m/s)
+    Q_PROPERTY(QVariantMap kevaSetpointLimits   READ kevaSetpointLimits         CONSTANT)
 
 public:
     explicit CustomPlugin(QObject *parent = nullptr);
@@ -113,6 +115,13 @@ public:
     QVariantList kevaMotorOutputs   () const { return _motorOutputs; }
     /// MGRS with 1 m precision, e.g. "52S CG 16486 58021"; empty for an invalid coordinate.
     Q_INVOKABLE QString kevaMgrs(const QGeoCoordinate &coord) const;
+    QVariantMap kevaSetpointLimits  () const;
+    /// New target altitude (relative to home, m) for the active vehicle: it stops a running
+    /// mission / takeoff and holds at the new altitude. Rounded to the step and limited to the range.
+    /// Returns false when not sent (no vehicle, not flying, no permission, altitude unknown).
+    Q_INVOKABLE bool kevaSetTargetAltitude(double altitudeRel);
+    /// New target airspeed (m/s) in fixed-wing flight, limited to FW_AIRSPD_MIN..FW_AIRSPD_MAX.
+    Q_INVOKABLE bool kevaSetTargetAirspeed(double airspeed);
 
 signals:
     void kevaMotorOutputsChanged();

@@ -120,6 +120,8 @@ Item {
             show:                   !QGroundControl.videoManager.fullScreen &&
                                         (videoControl.pipState.state === videoControl.pipState.pipState || mapControl.pipState.state === mapControl.pipState.pipState)
             z:                      QGroundControl.zOrderWidgets
+            // KEVA custom build: map / video end above the custom layer's bottom panels (0 in full screen video)
+            fullItemBottomInset:    QGroundControl.videoManager.fullScreen ? 0 : (customOverlay.mainViewBottomInset || 0)
 
             property real leftEdgeBottomInset: visible ? width + anchors.margins : 0
             property real bottomEdgeLeftInset: visible ? height + anchors.margins : 0
@@ -179,6 +181,7 @@ Item {
         Viewer3D{
             id:                     viewer3DWindow
             anchors.fill:           parent
+            anchors.bottomMargin:   _pipView.fullItemBottomInset    // KEVA custom build
         }
     }
 }

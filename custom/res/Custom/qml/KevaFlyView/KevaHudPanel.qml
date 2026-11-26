@@ -5,7 +5,7 @@
  * Simple Mission Planner / Bluebird style HUD:
  *   - sky Deep Sky Blue, ground Brown, white text, red reference marks
  *   - heading tape on top (Mission Planner style)
- *   - airspeed tape (left) and relative altitude tape (right), m/s and m,
+ *   - airspeed tape (left) and relative altitude tape (right, "REL"), m/s and m,
  *     climb rate ribbon on the altitude tape
  *   - pitch ladder (5 / 10 deg), bank scale (10, 20, 30, 45, 60 deg)
  *   - footer: ground speed, flight time, roll / pitch, MSL altitude, climb rate
@@ -178,7 +178,7 @@ KevaPanelFrame {
         width:          root._tapeW
         height:         root._tapeH
         colors:         root.kevaColors
-        title:          qsTr("ALT m")
+        title:          qsTr("REL m")
         value:          root._altRel
         range:          40
         minorStep:      2

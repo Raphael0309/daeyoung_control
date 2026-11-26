@@ -19,7 +19,11 @@
  *   Settings > Comm Links / AutoConnect); without it "--" (the PC's own
  *   network-based location is not accurate enough).
  * - Climb rate, roll, pitch and heading are shown in the HUD only.
- * - Alt. and Air Spd. become target dials in U10.
+ * - Alt. (Rel) and Air Spd. are target dials (click, turn or type, slide to
+ *   confirm): altitude 10-3000 m in 10 m steps, in Mission / Takeoff the
+ *   vehicle stops the mission and holds at the new altitude; airspeed within
+ *   FW_AIRSPD_MIN..MAX in 1 m/s steps, fixed-wing flight only (not in MR).
+ *   Not available before takeoff or for administrator accounts.
  *
  ****************************************************************************/
 
@@ -28,6 +32,7 @@ import QtPositioning
 
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.ScreenTools
 
 KevaPanelFrame {
     id: root
@@ -118,6 +123,32 @@ KevaPanelFrame {
         return NaN
     }
 
+    // Target dials
+    readonly property var   _limits:        QGroundControl.corePlugin.kevaSetpointLimits
+    readonly property bool  _canCommand:    vehicle !== null && vehicle.flying && QGroundControl.corePlugin.kevaCanControlVehicle
+    readonly property bool  _fwFlight:      vehicle ? (vehicle.vtol ? vehicle.vtolInFwdFlight : vehicle.fixedWing) : false
+    readonly property bool  _altSettable:   _canCommand && !isNaN(_altRel)
+    readonly property bool  _spdSettable:   _canCommand && _fwFlight
+
+    function _openAltitude() {
+        altPopup.x = altCell.x
+        altPopup.y = -altPopup.implicitHeight - _pad * 2
+        altPopup.openWith(_altRel)
+    }
+    function _openAirspeed() {
+        var mn = vehicle.minimumEquivalentAirspeed()
+        var mx = vehicle.maximumEquivalentAirspeed()
+        if (isNaN(mn) || isNaN(mx) || mx < mn) {
+            mainWindow.showMessageDialog(qsTr("Target Airspeed"), qsTr("Airspeed limits (FW_AIRSPD_MIN / FW_AIRSPD_MAX) are not available from the vehicle."))
+            return
+        }
+        spdPopup.minValue = mn
+        spdPopup.maxValue = mx
+        spdPopup.x = spdCell.x
+        spdPopup.y = -spdPopup.implicitHeight - _pad * 2
+        spdPopup.openWith(isNaN(_airSpd) ? mn : _airSpd)
+    }
+
     // Comm.: good packets over the last 5 s, sampled once a second
     property var    _commSamples:   []
     property real   _commPct:       NaN
@@ -151,10 +182,13 @@ KevaPanelFrame {
     // ---------------------------------------------------------------- parts
     component Cell: Rectangle {
         property string title
+        property bool   settable:   false   // shows the SET mark and reacts to clicks
         default property alias content: contentItem.data
 
-        color:          "transparent"
-        border.color:   root.kevaColors.border
+        signal clicked
+
+        color:          cellMouse.containsMouse && settable ? Qt.rgba(0, 0.75, 1, 0.08) : "transparent"
+        border.color:   cellMouse.containsMouse && settable ? root.kevaColors.deepSkyBlue : root.kevaColors.border
         border.width:   1
         radius:         3
         clip:           true
@@ -167,6 +201,38 @@ KevaPanelFrame {
             color:          root.kevaColors.deepSkyBlue
             font.pixelSize: root._titlePx
             font.bold:      true
+        }
+
+        // "SET" mark on settable blocks (bottom-right corner)
+        Rectangle {
+            anchors.right:          parent.right
+            anchors.bottom:         parent.bottom
+            anchors.margins:        root._pad * 2
+            width:                  setLabel.implicitWidth + root._pad * 3
+            height:                 setLabel.implicitHeight + root._pad
+            radius:                 2
+            visible:                settable
+            color:                  "transparent"
+            border.color:           root.kevaColors.deepSkyBlue
+            border.width:           1
+
+            QGCLabel {
+                id:                 setLabel
+                anchors.centerIn:   parent
+                text:               qsTr("SET")
+                color:              root.kevaColors.deepSkyBlue
+                font.pixelSize:     root._titlePx * 0.7
+                font.bold:          true
+            }
+        }
+
+        MouseArea {
+            id:             cellMouse
+            anchors.fill:   parent
+            hoverEnabled:   true
+            enabled:        settable
+            cursorShape:    settable ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked:      parent.clicked()
         }
 
         Item {
@@ -251,8 +317,11 @@ KevaPanelFrame {
 
     // ---------------------------------------------------------------- blocks
     Cell {
+        id: altCell
         x: _colX(0); y: _rowY(0); width: _colW(0); height: _rowH
-        title: qsTr("Alt. (Rel)")
+        title:      qsTr("Alt. (Rel)")
+        settable:   _altSettable
+        onClicked:  _openAltitude()
         BigValue { value: _fixed(_altRel, 1); unit: "m" }
     }
 
@@ -282,8 +351,11 @@ KevaPanelFrame {
     }
 
     Cell {
+        id: spdCell
         x: _colX(1); y: _rowY(0); width: _colW(1); height: _rowH
-        title: qsTr("Air Spd.")
+        title:      qsTr("Air Spd.")
+        settable:   _spdSettable
+        onClicked:  _openAirspeed()
         BigValue { value: _fixed(_airSpd, 1); unit: "m/s" }
     }
 
@@ -397,4 +469,49 @@ KevaPanelFrame {
             LabelValue { label: qsTr("GCS");  value: root._distText(root._distGcs);  px: root._rowPx * 0.88 }
         }
     }
+
+    // ---------------------------------------------------------------- target popups
+    KevaSetpointPopup {
+        id:         altPopup
+        title:      qsTr("Target Altitude (Rel)")
+        unit:       "m"
+        decimals:   0
+        minValue:   root._limits.altMin
+        maxValue:   root._limits.altMax
+        step:       root._limits.altStep
+        noteText: {
+            if (!root.vehicle) {
+                return ""
+            }
+            var m = root.vehicle.flightMode
+            // PX4 mode names: "Mission", "Takeoff"
+            if (m === root.vehicle.missionFlightMode || m === "Takeoff") {
+                return qsTr("The %1 stops and the vehicle holds at the new altitude.").arg(m === "Takeoff" ? qsTr("takeoff") : qsTr("mission"))
+            }
+            return qsTr("The vehicle holds at the new altitude.")
+        }
+        onConfirmed: (value) => {
+            if (!QGroundControl.corePlugin.kevaSetTargetAltitude(value)) {
+                mainWindow.showMessageDialog(qsTr("Target Altitude"), qsTr("Altitude command not sent."))
+            }
+        }
+    }
+
+    KevaSetpointPopup {
+        id:         spdPopup
+        title:      qsTr("Target Airspeed")
+        unit:       "m/s"
+        decimals:   0
+        step:       root._limits.airspeedStep
+        noteText:   qsTr("Applies in fixed-wing flight; the mission continues.")
+        onConfirmed: (value) => {
+            if (!QGroundControl.corePlugin.kevaSetTargetAirspeed(value)) {
+                mainWindow.showMessageDialog(qsTr("Target Airspeed"), qsTr("Airspeed command not sent."))
+            }
+        }
+    }
+
+    // Close the popups when the command is no longer possible (landed, MR transition, vehicle lost)
+    on_AltSettableChanged: if (!_altSettable) altPopup.close()
+    on_SpdSettableChanged: if (!_spdSettable) spdPopup.close()
 }
