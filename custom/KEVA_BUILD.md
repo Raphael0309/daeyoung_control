@@ -27,6 +27,19 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
   `QGroundControl.corePlugin.kevaColors` (e.g. `kevaColors.neonGreen`).
 * Font: Arial for the whole application (`KEVA_FONT_FAMILY` compile definition).
 
+### Fly view toolbar (UI deck slides 7-8)
+
+* `custom/res/Custom/qml/QGroundControl/Controls/FlyViewToolBar.qml` replaces QGC's
+  toolbar through the resource override (`/Custom/qml/...`): logo + "KEVA" (main
+  menu), coloured status box, then the indicators.
+* `KevaMainStatusIndicator.qml` is a copy of QGC's MainStatusIndicator with the
+  text colour and MR/FW label changed (marked `KEVA`); keep it in step on upstream merges.
+* Indicators (`custom/res/Custom/qml/KevaToolbar/`) are listed by
+  `CustomFirmwarePlugin::toolIndicators()`: flight mode (white, PX4 "Return" shown
+  as "Safe Recovery"), MR/FW, GPS (worst of satellites / lock / HDOP), batteries.
+  `modeIndicators()` keeps only the multi‑vehicle selector.
+* Selectable flight modes: `kevaModeSettable()` in `CustomFirmwarePlugin.cc`.
+
 ## Security module (MIL)
 
 Sources: `custom/src/Security/`, login window: `custom/res/Security/LoginWindow.qml`.

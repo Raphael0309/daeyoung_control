@@ -27,6 +27,16 @@
         <file alias="QGCLogoFull.svg">res/QGCLogoFull.svg</file>
         <file alias="qgroundcontrol.ico">res/icons/custom_qgroundcontrol.ico</file>
     </qresource>
+    <qresource prefix="/Custom/qml/QGroundControl/Controls">
+        <file alias="FlyViewToolBar.qml">res/Custom/qml/QGroundControl/Controls/FlyViewToolBar.qml</file>
+        <file alias="KevaMainStatusIndicator.qml">res/Custom/qml/QGroundControl/Controls/KevaMainStatusIndicator.qml</file>
+    </qresource>
+    <qresource prefix="/Custom/qml/KevaToolbar">
+        <file alias="KevaFlightModeIndicator.qml">res/Custom/qml/KevaToolbar/KevaFlightModeIndicator.qml</file>
+        <file alias="KevaTransitionIndicator.qml">res/Custom/qml/KevaToolbar/KevaTransitionIndicator.qml</file>
+        <file alias="KevaGPSIndicator.qml">res/Custom/qml/KevaToolbar/KevaGPSIndicator.qml</file>
+        <file alias="KevaBatteryIndicator.qml">res/Custom/qml/KevaToolbar/KevaBatteryIndicator.qml</file>
+    </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/VehicleSetup">
     <file alias="VehicleSummary.qml">res/Custom/qml/QGroundControl/VehicleSetup/VehicleSummary.qml</file>
 </qresource>
