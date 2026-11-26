@@ -32,8 +32,11 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
 * `custom/res/Custom/qml/QGroundControl/Controls/FlyViewToolBar.qml` replaces QGC's
   toolbar through the resource override (`/Custom/qml/...`): logo + "KEVA" (main
   menu), coloured status box, then the indicators.
-* `KevaMainStatusIndicator.qml` is a copy of QGC's MainStatusIndicator with the
+* `custom/res/Custom/qml/KevaToolbar/KevaMainStatusIndicator.qml` is a copy of QGC's MainStatusIndicator with the
   text colour and MR/FW label changed (marked `KEVA`); keep it in step on upstream merges.
+* An overriding QML file is loaded under QGC's original URL, so it cannot use
+  files placed next to it as types. Import shared parts by absolute path
+  (`import "qrc:/Custom/qml/KevaToolbar"`).
 * Indicators (`custom/res/Custom/qml/KevaToolbar/`) are listed by
   `CustomFirmwarePlugin::toolIndicators()`: flight mode (white, PX4 "Return" shown
   as "Safe Recovery"), MR/FW, GPS (worst of satellites / lock / HDOP), batteries.

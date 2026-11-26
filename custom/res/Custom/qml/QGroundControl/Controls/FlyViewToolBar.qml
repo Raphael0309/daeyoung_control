@@ -32,6 +32,10 @@ import QGroundControl.MultiVehicleManager
 import QGroundControl.ScreenTools
 import QGroundControl.Controllers
 
+// KEVA toolbar parts. Imported by absolute path: QGC loads this override under the
+// original URL, so files next to it in /Custom/... are not visible as local types.
+import "qrc:/Custom/qml/KevaToolbar"
+
 Rectangle {
     id:     _root
     width:  parent.width
