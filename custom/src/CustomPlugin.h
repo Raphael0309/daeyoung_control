@@ -27,6 +27,9 @@ namespace KevaSecurity { class AuthManager; class IdleLockController; }
 #endif
 
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QPointer>
+#include <QtCore/QVariantList>
+#include <QtPositioning/QGeoCoordinate>
 #include <QtCore/QVariantMap>
 #include <atomic>
 
@@ -75,6 +78,9 @@ class CustomPlugin : public QGCCorePlugin
     Q_PROPERTY(bool     kevaCanConfigureVehicle READ kevaCanConfigureVehicle    CONSTANT)
     // Brand colours for QML parts the QGC palette has no slot for (see KevaTheme.h)
     Q_PROPERTY(QVariantMap kevaColors           READ kevaColors                 CONSTANT)
+    // Status Data panel Thr%: [FW, M1, M2, M3, M4] output in percent (NaN = unknown),
+    // from SERVO_OUTPUT_RAW of the active vehicle. Empty when no data for 3 s.
+    Q_PROPERTY(QVariantList kevaMotorOutputs    READ kevaMotorOutputs           NOTIFY kevaMotorOutputsChanged)
 
 public:
     explicit CustomPlugin(QObject *parent = nullptr);
@@ -94,6 +100,7 @@ public:
     QQmlApplicationEngine*  createQmlApplicationEngine      (QObject* parent) final;
     QList<int>              firstRunPromptStdIds            () final;
     bool                    vehicleControlAllowed           (int command) final;
+    bool                    mavlinkMessage                  (Vehicle *vehicle, LinkInterface *link, const mavlink_message_t &message) final;
 
     bool    kevaSecured             () const;
     bool    kevaIsAdmin             () const;
@@ -103,6 +110,12 @@ public:
     bool    kevaCanConfigureVehicle () const;
     QVariantMap kevaColors          () const;
     Q_INVOKABLE bool kevaSettingsPageAllowed(const QString &pageUrl) const;
+    QVariantList kevaMotorOutputs   () const { return _motorOutputs; }
+    /// MGRS with 1 m precision, e.g. "52S CG 16486 58021"; empty for an invalid coordinate.
+    Q_INVOKABLE QString kevaMgrs(const QGeoCoordinate &coord) const;
+
+signals:
+    void kevaMotorOutputsChanged();
 
 #ifdef KEVA_EDITION_MIL
     /// Login session of the secured edition (role, user ID). Valid after init().
@@ -114,12 +127,16 @@ private slots:
 
 private:
     void _addSettingsEntry(const QString& title, const char* qmlFile, const char* iconFile = nullptr);
+    void _checkMotorOutputs();
 
 private:
     CustomOptions*  _options = nullptr;
     QQmlApplicationEngine *_qmlEngine = nullptr;
     class CustomOverrideInterceptor *_selector = nullptr;
     QVariantList    _customSettingsList; // Not to be mixed up with QGCCorePlugin implementation
+    QVariantList    _motorOutputs;
+    QElapsedTimer   _motorOutputsAge;
+    QPointer<Vehicle> _motorOutputsVehicle;
 #ifdef KEVA_EDITION_MIL
     KevaSecurity::AuthManager *_auth = nullptr;
     KevaSecurity::IdleLockController *_idleLock = nullptr;

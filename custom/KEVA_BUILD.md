@@ -54,6 +54,19 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
   (5/10 deg), bank scale (10/20/30/45/60 deg, fixed red index), red aircraft
   reference; footer GS, flight time (from takeoff, hh:mm:ss), roll/pitch,
   MSL altitude, climb rate. No armed/disarmed text.
+* Status Data panel (UI deck slides 11-12, `KevaStatusDataPanel.qml`), "--" before
+  connection:
+  * Alt. (Rel), Air Spd., Gnd Spd.
+  * Comm.: good MAVLink packets over the last 5 s (from the vehicle's received /
+    lost counters), bar and %, 70/50/30 % colour steps.
+  * Thr%: FW and M1-M4 in % with 60/80 % colour steps. Values come from
+    SERVO_OUTPUT_RAW main outputs (M1-M4 = outputs 1-4, FW = output 5,
+    PWM 1000-2000 us = 0-100 %; constants at the top of `CustomPlugin.cc`).
+    Without that message FW falls back to the VFR_HUD throttle in forward flight.
+  * Position: Lat./Lon. 7 decimals, MGRS 1 m (`CustomPlugin::kevaMgrs`).
+  * Wind dir./spd. with 8 / 12 m/s colour steps.
+  * Dist. to home; Dist. to GCS only with an NMEA GPS configured for the ground
+    station (AutoConnect NMEA port), otherwise "--".
 
 ### Fly view toolbar (UI deck slides 7-8)
 

@@ -23,6 +23,23 @@
 #include "UnitsSettings.h"
 #include "FlightMapSettings.h"
 #include "VideoSettings.h"
+#include "MultiVehicleManager.h"
+#include "Vehicle.h"
+#include "QGCGeo.h"
+#include <QtCore/QRegularExpression>
+#include <QtCore/QTimer>
+#include <cmath>
+
+namespace {
+// Status Data panel Thr% (UI deck slide 11): main outputs of SERVO_OUTPUT_RAW (port 0).
+// KEVA_7 standard VTOL layout: multicopter motors on outputs 1-4, pusher (FW) motor on 5.
+// Change here if the airframe's actuator mapping differs.
+constexpr int    kKevaFwOutput          = 5;
+constexpr int    kKevaMcOutputs[4]      = { 1, 2, 3, 4 };
+constexpr double kKevaPwmMin            = 1000.0;   // 0 %
+constexpr double kKevaPwmMax            = 2000.0;   // 100 %
+constexpr qint64 kKevaMotorStaleMs      = 3000;
+}
 
 #ifdef KEVA_EDITION_MIL
 #include "AccessPolicy.h"
@@ -129,6 +146,12 @@ QGCCorePlugin *CustomPlugin::instance()
 
 void CustomPlugin::init()
 {
+    // Motor outputs for the Status Data panel go blank when the data stops or the vehicle changes
+    QTimer *motorTimer = new QTimer(this);
+    motorTimer->setInterval(1000);
+    connect(motorTimer, &QTimer::timeout, this, &CustomPlugin::_checkMotorOutputs);
+    motorTimer->start();
+
 #ifdef KEVA_DISPLAY_NAME
     // Window titles and dialogs show the product name (QGC_APP_NAME has no spaces).
     QGuiApplication::setApplicationDisplayName(QStringLiteral(KEVA_DISPLAY_NAME));
@@ -514,4 +537,59 @@ QUrl CustomOverrideInterceptor::intercept(const QUrl &url, QQmlAbstractUrlInterc
     }
 
     return url;
+}
+
+/*---------------------------------------------------------------------------*/
+// Status Data panel helpers
+
+bool CustomPlugin::mavlinkMessage(Vehicle *vehicle, LinkInterface *link, const mavlink_message_t &message)
+{
+    if (message.msgid == MAVLINK_MSG_ID_SERVO_OUTPUT_RAW && vehicle && vehicle == MultiVehicleManager::instance()->activeVehicle()) {
+        mavlink_servo_output_raw_t raw;
+        mavlink_msg_servo_output_raw_decode(&message, &raw);
+        if (raw.port == 0) {
+            const uint16_t pwm[8] = { raw.servo1_raw, raw.servo2_raw, raw.servo3_raw, raw.servo4_raw,
+                                      raw.servo5_raw, raw.servo6_raw, raw.servo7_raw, raw.servo8_raw };
+            auto percent = [&pwm](int output) -> QVariant {
+                const uint16_t v = pwm[output - 1];
+                if (v == 0 || v == UINT16_MAX) {
+                    return QVariant(std::nan(""));
+                }
+                return QVariant(qBound(0.0, (v - kKevaPwmMin) * 100.0 / (kKevaPwmMax - kKevaPwmMin), 100.0));
+            };
+            QVariantList outputs { percent(kKevaFwOutput) };
+            for (const int output : kKevaMcOutputs) {
+                outputs.append(percent(output));
+            }
+            _motorOutputsVehicle = vehicle;
+            _motorOutputsAge.start();
+            _motorOutputs = outputs;
+            emit kevaMotorOutputsChanged();
+        }
+    }
+    return QGCCorePlugin::mavlinkMessage(vehicle, link, message);
+}
+
+void CustomPlugin::_checkMotorOutputs()
+{
+    if (_motorOutputs.isEmpty()) {
+        return;
+    }
+    const bool stale = !_motorOutputsAge.isValid() || _motorOutputsAge.elapsed() > kKevaMotorStaleMs;
+    if (stale || _motorOutputsVehicle.isNull() || _motorOutputsVehicle != MultiVehicleManager::instance()->activeVehicle()) {
+        _motorOutputs.clear();
+        emit kevaMotorOutputsChanged();
+    }
+}
+
+QString CustomPlugin::kevaMgrs(const QGeoCoordinate &coord) const
+{
+    if (!coord.isValid()) {
+        return QString();
+    }
+    // QGC gives "52SCG 16486 58021"; the UI deck writes the zone and the 100 km square apart
+    QString mgrs = QGCGeo::convertGeoToMGRS(coord);
+    static const QRegularExpression zoneSquare(QStringLiteral("^(\\d{1,2}[C-X])([A-Z]{2}) "));
+    mgrs.replace(zoneSquare, QStringLiteral("\\1 \\2 "));
+    return mgrs;
 }
