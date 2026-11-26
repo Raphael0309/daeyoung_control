@@ -43,9 +43,13 @@
         <file alias="KevaVideoPlaceholder.qml">res/Custom/qml/KevaFlyView/KevaVideoPlaceholder.qml</file>
         <file alias="KevaHudPanel.qml">res/Custom/qml/KevaFlyView/KevaHudPanel.qml</file>
         <file alias="KevaStatusDataPanel.qml">res/Custom/qml/KevaFlyView/KevaStatusDataPanel.qml</file>
+        <file alias="KevaHudAttitude.qml">res/Custom/qml/KevaFlyView/KevaHudAttitude.qml</file>
+        <file alias="KevaHudHeadingTape.qml">res/Custom/qml/KevaFlyView/KevaHudHeadingTape.qml</file>
+        <file alias="KevaHudTape.qml">res/Custom/qml/KevaFlyView/KevaHudTape.qml</file>
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/FlightDisplay">
         <file alias="FlyViewBottomRightRowLayout.qml">res/Custom/qml/QGroundControl/FlightDisplay/FlyViewBottomRightRowLayout.qml</file>
+        <file alias="FlightDisplayViewVideo.qml">res/Custom/qml/QGroundControl/FlightDisplay/FlightDisplayViewVideo.qml</file>
     </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/VehicleSetup">
     <file alias="VehicleSummary.qml">res/Custom/qml/QGroundControl/VehicleSetup/VehicleSummary.qml</file>

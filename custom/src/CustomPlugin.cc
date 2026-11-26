@@ -22,6 +22,7 @@
 #include "BrandImageSettings.h"
 #include "UnitsSettings.h"
 #include "FlightMapSettings.h"
+#include "VideoSettings.h"
 
 #ifdef KEVA_EDITION_MIL
 #include "AccessPolicy.h"
@@ -372,6 +373,15 @@ bool CustomPlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaD
             metaData.setRawDefaultValue(QStringLiteral("Google"));
         } else if (metaData.name() == QLatin1String(FlightMapSettings::mapTypeName)) {
             metaData.setRawDefaultValue(QStringLiteral("Hybrid"));
+        }
+        return parentResult;
+    }
+
+    // Video: no frames for about 5 s -> "Video Transmission Disconnected" (UI deck slide 9).
+    // QGC stops the stream after the timeout (UDP: fixed 3 s); RTSP uses this setting.
+    if (settingsGroup == QLatin1String(VideoSettings::settingsGroup)) {
+        if (metaData.name() == QLatin1String(VideoSettings::rtspTimeoutName)) {
+            metaData.setRawDefaultValue(4);
         }
         return parentResult;
     }

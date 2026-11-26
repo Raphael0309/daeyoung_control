@@ -42,6 +42,18 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
   bottom-right telemetry bar and instrument panel are removed
   (override of `FlyViewBottomRightRowLayout.qml`). The administrator banner
   sits above the strip.
+* Video window (UI deck slide 9): override of `FlightDisplayViewVideo.qml`
+  (copied from QGC Stable_V5.0, only the "no video" part changed) shows a black
+  window with red "Video Transmission Disconnected" whenever no frames are
+  decoded. QGC stops a stalled stream after its timeout (UDP 3 s, RTSP uses
+  "RTSP Video Timeout", KEVA default 4 s), so the message appears about 5 s
+  after the picture stops. When the upstream file changes, re-copy it and
+  re-apply the "noVideo" block.
+* HUD (UI deck slide 10, `KevaHudPanel.qml` + `KevaHud*.qml`): heading tape,
+  airspeed tape, relative altitude tape with climb ribbon, pitch ladder
+  (5/10 deg), bank scale (10/20/30/45/60 deg, fixed red index), red aircraft
+  reference; footer GS, flight time (from takeoff, hh:mm:ss), roll/pitch,
+  MSL altitude, climb rate. No armed/disarmed text.
 
 ### Fly view toolbar (UI deck slides 7-8)
 
