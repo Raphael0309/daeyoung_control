@@ -77,6 +77,10 @@ QString ScreenToolsController::fixedFontFamily()
 
 QString ScreenToolsController::normalFontFamily()
 {
+#ifdef KEVA_FONT_FAMILY
+    // KEVA custom build: product font (missing glyphs, e.g. Hangul, fall back to the system font)
+    return QStringLiteral(KEVA_FONT_FAMILY);
+#else
     //-- See App.SettinsGroup.json for index
     const int langID = SettingsManager::instance()->appSettings()->qLocaleLanguage()->rawValue().toInt();
     if (langID == QLocale::Korean) {
@@ -84,6 +88,7 @@ QString ScreenToolsController::normalFontFamily()
     }
 
     return QStringLiteral("Open Sans");
+#endif
 }
 
 double ScreenToolsController::defaultFontDescent(int pointSize)

@@ -27,6 +27,7 @@ namespace KevaSecurity { class AuthManager; class IdleLockController; }
 #endif
 
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QVariantMap>
 #include <atomic>
 
 Q_DECLARE_LOGGING_CATEGORY(CustomLog)
@@ -72,6 +73,8 @@ class CustomPlugin : public QGCCorePlugin
     Q_PROPERTY(bool     kevaCanControlVehicle   READ kevaCanControlVehicle      CONSTANT)
     Q_PROPERTY(bool     kevaCanPlan             READ kevaCanPlan                CONSTANT)
     Q_PROPERTY(bool     kevaCanConfigureVehicle READ kevaCanConfigureVehicle    CONSTANT)
+    // Brand colours for QML parts the QGC palette has no slot for (see KevaTheme.h)
+    Q_PROPERTY(QVariantMap kevaColors           READ kevaColors                 CONSTANT)
 
 public:
     explicit CustomPlugin(QObject *parent = nullptr);
@@ -98,6 +101,7 @@ public:
     bool    kevaCanControlVehicle   () const;
     bool    kevaCanPlan             () const;
     bool    kevaCanConfigureVehicle () const;
+    QVariantMap kevaColors          () const;
     Q_INVOKABLE bool kevaSettingsPageAllowed(const QString &pageUrl) const;
 
 #ifdef KEVA_EDITION_MIL

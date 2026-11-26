@@ -19,6 +19,14 @@ to a COM build, even if the folder was configured as MIL before.
 The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
 `custom/cmake/CustomOverrides.cmake`, not from the upstream QGC git tags.
 
+## Look and feel
+
+* Palette: `custom/src/KevaTheme.h` (UI deck slide 1) mapped onto QGC's palette in
+  `CustomPlugin::paletteOverride()`. Same colours in both QGC themes; the theme
+  setting is hidden. QML can use the brand colours through
+  `QGroundControl.corePlugin.kevaColors` (e.g. `kevaColors.neonGreen`).
+* Font: Arial for the whole application (`KEVA_FONT_FAMILY` compile definition).
+
 ## Security module (MIL)
 
 Sources: `custom/src/Security/`, login window: `custom/res/Security/LoginWindow.qml`.
@@ -66,6 +74,7 @@ Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
 
 * `cmake/Git.cmake` – product version override
 * `cmake/Install.cmake` – installer script / file name override
+* `src/QmlControls/ScreenToolsController.cc` – product font (`KEVA_FONT_FAMILY`, Arial)
 * `src/MAVLink/LibEvents/CMakeLists.txt` – libevents pinned to `077677a`
   (upstream "main" no longer builds against QGC 5.0's MAVLink headers)
 * `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual
