@@ -5,7 +5,11 @@
  * Replaces QGC's src/QmlControls/FlyViewToolBar.qml through the custom
  * resource override (/Custom/qml/QGroundControl/Controls/FlyViewToolBar.qml).
  *
- *   [logo][KEVA] [status box] [flight mode] [MR/FW] [GPS] [battery ...] [vehicle selector]
+ *   [company logo] [status box] [flight mode] [MR/FW] [GPS] [battery ...] [vehicle selector] ...... [KEVA]
+ *
+ * The company logo (custom/res/QGCLogoFull.svg) opens the main menu. "KEVA" is the
+ * product brand at the right end, shown while a vehicle is connected - the place
+ * where QGC shows its vehicle brand image.
  *
  * Status box colours (QGC's red / yellow / green, green shown as Deep Sky Blue):
  *   Not Ready / Comms Lost : Red,           white text
@@ -82,26 +86,13 @@ Rectangle {
         anchors.bottom:         parent.bottom
         spacing:                ScreenTools.defaultFontPixelWidth
 
-        // Logo + brand name: opens the main menu (Plan Flight, Analyze Tools, Vehicle Configuration, Application Settings)
+        // Company logo: opens the main menu (Plan Flight, Analyze Tools, Vehicle Configuration, Application Settings)
         QGCToolBarButton {
             id:                     currentButton
             Layout.preferredHeight: viewButtonRow.height
             icon.source:            "/res/QGCLogoFull.svg"
             logo:                   true
             onClicked:              mainWindow.showToolSelectDialog()
-        }
-
-        QGCLabel {
-            Layout.alignment:   Qt.AlignVCenter
-            text:               "KEVA"
-            color:              _kc.deepSkyBlue
-            font.bold:          true
-            font.pointSize:     ScreenTools.largeFontPointSize * 1.4
-
-            QGCMouseArea {
-                anchors.fill:   parent
-                onClicked:      mainWindow.showToolSelectDialog()
-            }
         }
 
         // Status box
@@ -142,6 +133,19 @@ Rectangle {
 
         // Indicators come from CustomFirmwarePlugin::toolIndicators() / modeIndicators()
         FlyViewToolBarIndicators { id: toolIndicators }
+    }
+
+    // Product brand at the right end, while a vehicle is connected (replaces QGC's brand image)
+    QGCLabel {
+        anchors.right:          parent.right
+        anchors.rightMargin:    ScreenTools.defaultFontPixelWidth * 1.5
+        anchors.verticalCenter: parent.verticalCenter
+        text:                   "KEVA"
+        color:                  _kc.deepSkyBlue
+        font.bold:              true
+        font.pointSize:         ScreenTools.largeFontPointSize * 1.4
+        visible:                _activeVehicle && !_communicationLost &&
+                                x > (toolsFlickable.x + toolsFlickable.contentWidth + ScreenTools.defaultFontPixelWidth)
     }
 
     // Small parameter download progress bar
