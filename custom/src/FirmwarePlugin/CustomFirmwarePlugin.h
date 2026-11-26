@@ -31,6 +31,8 @@ public:
     const QVariantList& modeIndicators  (const Vehicle* vehicle) final;
     bool                hasGimbal       (Vehicle* vehicle, bool& rollSupported, bool& pitchSupported, bool& yawSupported) const final;
     void                updateAvailableFlightModes      (FlightModeList &modeList) override;
+    QString             vehicleImageOpaque  (const Vehicle* vehicle) const override;
+    QString             vehicleImageOutline (const Vehicle* vehicle) const override;
 
     // Uses the protected FirmwarePlugin::_toolIndicatorList / _modeIndicatorList caches
 };

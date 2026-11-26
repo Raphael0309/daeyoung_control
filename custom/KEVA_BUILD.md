@@ -28,8 +28,12 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
 * Font: Arial for the whole application (`KEVA_FONT_FAMILY` compile definition).
 * Language: English whatever the PC language (`KEVA_FORCE_ENGLISH`, hook in
   `QGCApplication::setLanguage()`); the language setting is hidden.
-* Fly view tool strip: Takeoff, Return, Pause, Resume Mission
-  (`custom/src/FlyViewToolStripActionList.qml`).
+* Fly view tool strip: Takeoff, Return, Pause, Resume Mission, always in the same
+  place and greyed out when not available (`custom/src/FlyViewToolStripActionList.qml`).
+* Map: Google Hybrid by default (can be changed in Settings > Maps, where offline
+  map download is also available); vehicle marker is a Neon Green heading arrow
+  (`custom/res/Images/KevaVehicleArrow.svg`, `CustomFirmwarePlugin::vehicleImageOpaque`).
+  The ground station position is drawn with the company logo.
 
 ### Fly view toolbar (UI deck slides 7-8)
 

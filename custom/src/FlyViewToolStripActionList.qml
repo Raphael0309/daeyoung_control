@@ -23,7 +23,14 @@ ToolStripActionList {
         PreFlightCheckListShowAction { onTriggered: displayPreFlightChecklist() },
         GuidedActionTakeoff { },
         GuidedActionRTL { },
-        GuidedActionPause { },
+        // Pause: always shown so the four buttons keep their place; enabled while flying (QGC shows it only then)
+        GuidedToolStripAction {
+            text:       _guidedController.pauseTitle
+            iconSource: "/res/pause-mission.svg"
+            visible:    true
+            enabled:    _guidedController.showPause
+            actionID:   _guidedController.actionPause
+        },
         // Resume Mission: continues a paused mission in flight; on the ground it starts the mission
         GuidedToolStripAction {
             property bool _canStart:    _guidedController.showStartMission

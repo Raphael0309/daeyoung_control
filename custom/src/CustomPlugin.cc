@@ -21,6 +21,7 @@
 #include "AppSettings.h"
 #include "BrandImageSettings.h"
 #include "UnitsSettings.h"
+#include "FlightMapSettings.h"
 
 #ifdef KEVA_EDITION_MIL
 #include "AccessPolicy.h"
@@ -363,6 +364,16 @@ bool CustomPlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaD
             metaData.setRawDefaultValue(QGCMAVLink::VehicleClassVTOL);
             return false;
         }
+    }
+
+    // Default map: Google Hybrid (UI deck slide 5). The operator can still pick another map in the settings.
+    if (settingsGroup == QLatin1String(FlightMapSettings::settingsGroup)) {
+        if (metaData.name() == QLatin1String(FlightMapSettings::mapProviderName)) {
+            metaData.setRawDefaultValue(QStringLiteral("Google"));
+        } else if (metaData.name() == QLatin1String(FlightMapSettings::mapTypeName)) {
+            metaData.setRawDefaultValue(QStringLiteral("Hybrid"));
+        }
+        return parentResult;
     }
 
     // Metric units only. Returning false hides the setting and forces the default value.

@@ -156,3 +156,14 @@ void CustomFirmwarePlugin::updateAvailableFlightModes(FlightModeList &modeList)
     }
     _updateFlightModeList(modeList);
 }
+
+// Map vehicle marker: Neon Green heading arrow (UI deck slide 5)
+QString CustomFirmwarePlugin::vehicleImageOpaque(const Vehicle* /*vehicle*/) const
+{
+    return QStringLiteral("/custom/img/KevaVehicleArrow.svg");
+}
+
+QString CustomFirmwarePlugin::vehicleImageOutline(const Vehicle* /*vehicle*/) const
+{
+    return QStringLiteral("/custom/img/KevaVehicleArrow.svg");
+}

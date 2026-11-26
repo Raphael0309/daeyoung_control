@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72">
+    <!-- KEVA vehicle marker: Neon Green heading arrow (UI deck), dark rim for contrast on satellite imagery -->
+    <path d="M36 3 69 69 36 52 3 69Z" fill="#39FF14" stroke="#0A2A00" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M36 9V50L64 64Z" fill="#000000" fill-opacity="0.18"/>
+</svg>
