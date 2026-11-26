@@ -37,8 +37,11 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
 * Fly view bottom strip (UI deck slide 6), 30% of the Fly view height:
   video window | HUD | Status Data panel (`custom/src/FlyViewCustomLayer.qml`,
   parts in `custom/res/Custom/qml/KevaFlyView/`). The video window is QGC's
-  picture-in-picture view with its default size matched to the strip; without
-  video a black "Video Transmission Disconnected" slot is shown. QGC's
+  picture-in-picture view with its default size matched to the strip. It is
+  always shown, also without a video source (black "Video Transmission
+  Disconnected"): click swaps it with the map, double-click (or the top-left
+  button on hover) opens it in a separate window, the bottom-left button
+  collapses it, the corner handle resizes it. QGC's
   bottom-right telemetry bar and instrument panel are removed
   (override of `FlyViewBottomRightRowLayout.qml`). The administrator banner
   sits above the strip.
@@ -133,6 +136,10 @@ Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
 * `cmake/Install.cmake` – installer script / file name override
 * `src/QmlControls/ScreenToolsController.cc` – product font (`KEVA_FONT_FAMILY`, Arial)
 * `src/QGCApplication.cc` – English UI (`KEVA_FORCE_ENGLISH`)
+* `src/FlightDisplay/FlyView.qml` – video window shown even without a video source
+* `src/FlightDisplay/FlyViewVideo.qml` – "disconnected" display without a video source
+* `src/QmlControls/PipView.qml` – click swaps (after the double-click interval),
+  double-click opens a separate window
 * `src/MAVLink/LibEvents/CMakeLists.txt` – libevents pinned to `077677a`
   (upstream "main" no longer builds against QGC 5.0's MAVLink headers)
 * `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual

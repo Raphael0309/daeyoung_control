@@ -58,7 +58,8 @@ Item {
         id:             videoStreaming
         anchors.fill:   parent
         useSmallFont:   _root.pipState.state !== _root.pipState.fullState
-        visible:        QGroundControl.videoManager.isStreamSource
+        // KEVA custom build: also shown without a video source, for its "disconnected" display
+        visible:        QGroundControl.videoManager.isStreamSource || !QGroundControl.videoManager.isUvc
     }
     //-- UVC Video (USB Camera or Video Device)
     Loader {

@@ -5,10 +5,11 @@
  * Bottom strip, left to right: video window | HUD panel | Status Data panel.
  *
  * - The strip height is 30% of the Fly view (about 310 px at 1920x1080).
- * - The video window is QGC's picture-in-picture view (swap with the map,
- *   resize, collapse and pop-out are unchanged); its default size is set so
- *   that it lines up with the strip. Without video, a black "Video
- *   Transmission Disconnected" slot takes its place.
+ * - The video window is QGC's picture-in-picture view, always shown (black
+ *   "Video Transmission Disconnected" without video). Click swaps it with the
+ *   map, double-click or the top-left button opens it in a separate window,
+ *   the bottom-left button collapses it, the corner handle resizes it. Its
+ *   default size is set so that it lines up with the strip.
  * - The HUD follows the right edge of the video window, the Status Data panel
  *   takes the remaining width.
  * - The custom example's compass / attitude widgets were removed.
@@ -50,7 +51,7 @@ Item {
         if (_pipShown) {
             return _pipView.x + (_pipView._isExpanded ? _pipView.width : ScreenTools.defaultFontPixelHeight * 2)
         }
-        return videoPlaceholder.x + videoPlaceholder.width
+        return 0    // video in a separate window: the HUD moves to the left edge
     }
 
     function _applyVideoSize() {
@@ -78,17 +79,6 @@ Item {
         bottomEdgeLeftInset:    Math.max(parentToolInsets.bottomEdgeLeftInset, _stripInset)
         bottomEdgeCenterInset:  Math.max(parentToolInsets.bottomEdgeCenterInset, _stripInset)
         bottomEdgeRightInset:   Math.max(parentToolInsets.bottomEdgeRightInset, _stripInset)
-    }
-
-    // Video slot when no video stream is configured (QGC shows no window then)
-    KevaVideoPlaceholder {
-        id:                     videoPlaceholder
-        anchors.left:           parent.left
-        anchors.bottom:         parent.bottom
-        anchors.margins:        _toolsMargin
-        width:                  _videoDefaultW
-        height:                 _panelH
-        visible:                !QGroundControl.videoManager.hasVideo
     }
 
     KevaHudPanel {

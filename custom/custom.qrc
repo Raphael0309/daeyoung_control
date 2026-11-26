@@ -40,7 +40,6 @@
     </qresource>
     <qresource prefix="/Custom/qml/KevaFlyView">
         <file alias="KevaPanelFrame.qml">res/Custom/qml/KevaFlyView/KevaPanelFrame.qml</file>
-        <file alias="KevaVideoPlaceholder.qml">res/Custom/qml/KevaFlyView/KevaVideoPlaceholder.qml</file>
         <file alias="KevaHudPanel.qml">res/Custom/qml/KevaFlyView/KevaHudPanel.qml</file>
         <file alias="KevaStatusDataPanel.qml">res/Custom/qml/KevaFlyView/KevaStatusDataPanel.qml</file>
         <file alias="KevaHudAttitude.qml">res/Custom/qml/KevaFlyView/KevaHudAttitude.qml</file>

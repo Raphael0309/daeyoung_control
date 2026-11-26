@@ -114,7 +114,22 @@ Item {
         enabled:        _isExpanded
         preventStealing: true
         hoverEnabled:   true
-        onClicked:      _swapPip()
+        // KEVA custom build: click swaps with the main view, double-click opens a separate window.
+        // The swap waits for the double-click interval so a double-click does not swap first.
+        onClicked:      _pipClickTimer.restart()
+        onDoubleClicked: {
+            _pipClickTimer.stop()
+            if (!ScreenTools.isMobile) {
+                _pipOrWindowItem.pipState.state = _pipOrWindowItem.pipState.windowState
+            }
+        }
+    }
+
+    Timer {
+        id:             _pipClickTimer
+        interval:       Qt.styleHints.mouseDoubleClickInterval
+        repeat:         false
+        onTriggered:    _swapPip()
     }
 
     // MouseArea to drag in order to resize the PiP area
