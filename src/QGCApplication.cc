@@ -214,10 +214,16 @@ void QGCApplication::setLanguage()
     _locale = QLocale::system();
     qCDebug(QGCApplicationLog) << "System reported locale:" << _locale << "; Name" << _locale.name() << "; Preffered (used in maps): " << (QLocale::system().uiLanguages().length() > 0 ? QLocale::system().uiLanguages()[0] : "None");
 
+#ifdef KEVA_FORCE_ENGLISH
+    // KEVA custom build: English UI whatever the PC language (UI deck is in English)
+    _locale = QLocale(QLocale::English, QLocale::UnitedStates);
+    QLocale::setDefault(_locale);
+#else
     QLocale::Language possibleLocale = AppSettings::_qLocaleLanguageEarlyAccess();
     if (possibleLocale != QLocale::AnyLanguage) {
         _locale = QLocale(possibleLocale);
     }
+#endif
     //-- We have specific fonts for Korean
     if (_locale == QLocale::Korean) {
         qCDebug(QGCApplicationLog) << "Loading Korean fonts" << _locale.name();

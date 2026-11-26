@@ -26,6 +26,10 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
   setting is hidden. QML can use the brand colours through
   `QGroundControl.corePlugin.kevaColors` (e.g. `kevaColors.neonGreen`).
 * Font: Arial for the whole application (`KEVA_FONT_FAMILY` compile definition).
+* Language: English whatever the PC language (`KEVA_FORCE_ENGLISH`, hook in
+  `QGCApplication::setLanguage()`); the language setting is hidden.
+* Fly view tool strip: Takeoff, Return, Pause, Resume Mission
+  (`custom/src/FlyViewToolStripActionList.qml`).
 
 ### Fly view toolbar (UI deck slides 7-8)
 
@@ -91,6 +95,7 @@ Kept to small, marked (`KEVA custom build`) hooks so upstream merges stay easy:
 * `cmake/Git.cmake` – product version override
 * `cmake/Install.cmake` – installer script / file name override
 * `src/QmlControls/ScreenToolsController.cc` – product font (`KEVA_FONT_FAMILY`, Arial)
+* `src/QGCApplication.cc` – English UI (`KEVA_FORCE_ENGLISH`)
 * `src/MAVLink/LibEvents/CMakeLists.txt` – libevents pinned to `077677a`
   (upstream "main" no longer builds against QGC 5.0's MAVLink headers)
 * `src/API/QGCCorePlugin.h` – `vehicleControlAllowed()` virtual

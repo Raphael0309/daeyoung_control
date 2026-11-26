@@ -5,7 +5,7 @@
  * Satellites | lock | HDOP. Colour follows the worst of the three:
  *   Neon Green : >= 20 satellites, 3D lock or better (RTK counts), HDOP <= 0.9
  *   Yellow     : 15-19 satellites, 2D lock, 0.9 < HDOP < 1.3
- *   Red        : < 15 satellites, no fix / no GPS, HDOP >= 1.3 (or unknown)
+ *   Red        : < 15 satellites, no fix / no GPS, HDOP >= 1.3 (or unknown, shown as "-")
  * Click opens QGC's GPS details page.
  *
  ****************************************************************************/
@@ -28,7 +28,11 @@ Item {
 
     readonly property real satellites:  activeVehicle ? activeVehicle.gps.count.value : NaN
     readonly property int  lock:        activeVehicle ? activeVehicle.gps.lock.value : 0
-    readonly property real hdop:        activeVehicle ? activeVehicle.gps.hdop.value : NaN
+    // PX4/QGC report a large placeholder HDOP (e.g. 99.99 / 100) without a fix: treat it as unknown
+    readonly property real hdop: {
+        var h = activeVehicle ? activeVehicle.gps.hdop.value : NaN
+        return (isNaN(h) || h >= 50) ? NaN : h
+    }
 
     readonly property var lockNames: [ qsTr("No GPS"), qsTr("No Fix"), qsTr("2D"), qsTr("3D"), qsTr("DGPS"), qsTr("RTK Float"), qsTr("RTK Fixed") ]
 

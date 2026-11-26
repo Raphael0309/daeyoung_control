@@ -351,6 +351,9 @@ bool CustomPlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaD
         if (metaData.name() == AppSettings::offlineEditingFirmwareClassName) {
             metaData.setRawDefaultValue(QGCMAVLink::FirmwareClassPX4);
             return false;
+        } else if (metaData.name() == AppSettings::qLocaleLanguageName) {
+            // UI language is fixed to English (KEVA_FORCE_ENGLISH)
+            return false;
         } else if (metaData.name() == AppSettings::indoorPaletteName) {
             // Black KEVA UI only (the palette is the same in both themes, this just hides the choice)
             metaData.setRawDefaultValue(1);

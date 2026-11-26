@@ -1,9 +1,11 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * Daeyoung Ground Control - Fly view tool strip (UI deck slide 6)
  *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
+ * Takeoff, Return, Pause and Resume Mission are kept; every other command
+ * goes through the flight mode menu or the Status Data panel. The pre-flight
+ * checklist button appears only when enabled in the settings (as in QGC).
+ * All buttons are hidden for administrator accounts (guided actions disabled).
  *
  ****************************************************************************/
 
@@ -20,16 +22,16 @@ ToolStripActionList {
     model: [
         PreFlightCheckListShowAction { onTriggered: displayPreFlightChecklist() },
         GuidedActionTakeoff { },
-        GuidedActionLand { },
         GuidedActionRTL { },
         GuidedActionPause { },
-        FlyViewAdditionalActionsButton { },
+        // Resume Mission: continues a paused mission in flight; on the ground it starts the mission
         GuidedToolStripAction {
-            text:       _guidedController._customController.customButtonTitle
-            iconSource: "/res/gear-white.svg"
-            visible:    true
-            enabled:    true
-            actionID:   _guidedController._customController.actionCustomButton
-}
+            property bool _canStart:    _guidedController.showStartMission
+            text:                       _canStart ? _guidedController.startMissionTitle : qsTr("Resume Mission")
+            iconSource:                 "/res/Play.svg"
+            visible:                    true
+            enabled:                    _guidedController.showContinueMission || _canStart
+            actionID:                   _canStart ? _guidedController.actionStartMission : _guidedController.actionContinueMission
+        }
     ]
 }
