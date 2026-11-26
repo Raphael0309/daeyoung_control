@@ -38,6 +38,15 @@
         <file alias="KevaBatteryIndicator.qml">res/Custom/qml/KevaToolbar/KevaBatteryIndicator.qml</file>
         <file alias="KevaMainStatusIndicator.qml">res/Custom/qml/KevaToolbar/KevaMainStatusIndicator.qml</file>
     </qresource>
+    <qresource prefix="/Custom/qml/KevaFlyView">
+        <file alias="KevaPanelFrame.qml">res/Custom/qml/KevaFlyView/KevaPanelFrame.qml</file>
+        <file alias="KevaVideoPlaceholder.qml">res/Custom/qml/KevaFlyView/KevaVideoPlaceholder.qml</file>
+        <file alias="KevaHudPanel.qml">res/Custom/qml/KevaFlyView/KevaHudPanel.qml</file>
+        <file alias="KevaStatusDataPanel.qml">res/Custom/qml/KevaFlyView/KevaStatusDataPanel.qml</file>
+    </qresource>
+    <qresource prefix="/Custom/qml/QGroundControl/FlightDisplay">
+        <file alias="FlyViewBottomRightRowLayout.qml">res/Custom/qml/QGroundControl/FlightDisplay/FlyViewBottomRightRowLayout.qml</file>
+    </qresource>
     <qresource prefix="/Custom/qml/QGroundControl/VehicleSetup">
     <file alias="VehicleSummary.qml">res/Custom/qml/QGroundControl/VehicleSetup/VehicleSummary.qml</file>
 </qresource>

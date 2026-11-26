@@ -34,6 +34,14 @@ The product version comes from `KEVA_PRODUCT_VERSION` (default `1.0.1`) in
   map download is also available); vehicle marker is a Neon Green heading arrow
   (`custom/res/Images/KevaVehicleArrow.svg`, `CustomFirmwarePlugin::vehicleImageOpaque`).
   The ground station position is drawn with the company logo.
+* Fly view bottom strip (UI deck slide 6), 30% of the Fly view height:
+  video window | HUD | Status Data panel (`custom/src/FlyViewCustomLayer.qml`,
+  parts in `custom/res/Custom/qml/KevaFlyView/`). The video window is QGC's
+  picture-in-picture view with its default size matched to the strip; without
+  video a black "Video Transmission Disconnected" slot is shown. QGC's
+  bottom-right telemetry bar and instrument panel are removed
+  (override of `FlyViewBottomRightRowLayout.qml`). The administrator banner
+  sits above the strip.
 
 ### Fly view toolbar (UI deck slides 7-8)
 

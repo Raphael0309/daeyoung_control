@@ -1,11 +1,17 @@
 /****************************************************************************
  *
- * Daeyoung Ground Control - custom Fly view layer
+ * Daeyoung Ground Control - custom Fly view layer (UI deck slide 6)
  *
- * The custom example's compass tape and attitude/compass dials were removed
- * (UI deck: HUD and Status Data panels replace them). This layer now holds
- * the administrator "monitoring only" banner; the bottom panels are added in
- * later UI steps.
+ * Bottom strip, left to right: video window | HUD panel | Status Data panel.
+ *
+ * - The strip height is 30% of the Fly view (about 310 px at 1920x1080).
+ * - The video window is QGC's picture-in-picture view (swap with the map,
+ *   resize, collapse and pop-out are unchanged); its default size is set so
+ *   that it lines up with the strip. Without video, a black "Video
+ *   Transmission Disconnected" slot takes its place.
+ * - The HUD follows the right edge of the video window, the Status Data panel
+ *   takes the remaining width.
+ * - The custom example's compass / attitude widgets were removed.
  *
  ****************************************************************************/
 
@@ -18,13 +24,43 @@ import QGroundControl.Controls
 import QGroundControl.Palette
 import QGroundControl.ScreenTools
 
+import "qrc:/Custom/qml/KevaFlyView"
+
 Item {
+    id: _root
+
     property var parentToolInsets                       // These insets tell you what screen real estate is available for positioning the controls in your overlay
     property var totalToolInsets:   _totalToolInsets    // The insets updated for the custom overlay additions
     property var mapControl
 
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property real   _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
+    readonly property var _kevaColors:  QGroundControl.corePlugin.kevaColors
+
+    // Bottom strip geometry
+    readonly property real _panelH:         Math.round(Math.max(ScreenTools.defaultFontPixelHeight * 10, height * 0.30))
+    readonly property real _videoDefaultW:  Math.round(_panelH * 16 / 9)
+    readonly property real _hudW:           Math.round(_panelH * 1.28)
+    readonly property real _stripInset:     _panelH + _toolsMargin * 2
+
+    // QGC's picture-in-picture video view lives in FlyView.qml (id _pipView)
+    readonly property bool _hasPip:         typeof _pipView !== "undefined"
+    readonly property bool _pipShown:       _hasPip && _pipView.visible
+    readonly property real _videoRight: {
+        if (_pipShown) {
+            return _pipView.x + (_pipView._isExpanded ? _pipView.width : ScreenTools.defaultFontPixelHeight * 2)
+        }
+        return videoPlaceholder.x + videoPlaceholder.width
+    }
+
+    function _applyVideoSize() {
+        if (_hasPip) {
+            _pipView._pipSize = _videoDefaultW
+        }
+    }
+
+    Component.onCompleted:      _applyVideoSize()
+    on_VideoDefaultWChanged:    _applyVideoSize()
 
     QGCPalette { id: qgcPal }
 
@@ -39,9 +75,40 @@ Item {
         topEdgeLeftInset:       parentToolInsets.topEdgeLeftInset
         topEdgeCenterInset:     parentToolInsets.topEdgeCenterInset
         topEdgeRightInset:      parentToolInsets.topEdgeRightInset
-        bottomEdgeLeftInset:    parentToolInsets.bottomEdgeLeftInset
-        bottomEdgeCenterInset:  parentToolInsets.bottomEdgeCenterInset
-        bottomEdgeRightInset:   parentToolInsets.bottomEdgeRightInset
+        bottomEdgeLeftInset:    Math.max(parentToolInsets.bottomEdgeLeftInset, _stripInset)
+        bottomEdgeCenterInset:  Math.max(parentToolInsets.bottomEdgeCenterInset, _stripInset)
+        bottomEdgeRightInset:   Math.max(parentToolInsets.bottomEdgeRightInset, _stripInset)
+    }
+
+    // Video slot when no video stream is configured (QGC shows no window then)
+    KevaVideoPlaceholder {
+        id:                     videoPlaceholder
+        anchors.left:           parent.left
+        anchors.bottom:         parent.bottom
+        anchors.margins:        _toolsMargin
+        width:                  _videoDefaultW
+        height:                 _panelH
+        visible:                !QGroundControl.videoManager.hasVideo
+    }
+
+    KevaHudPanel {
+        id:                     hudPanel
+        x:                      _videoRight + _toolsMargin
+        anchors.bottom:         parent.bottom
+        anchors.bottomMargin:   _toolsMargin
+        width:                  _hudW
+        height:                 _panelH
+    }
+
+    KevaStatusDataPanel {
+        id:                     statusPanel
+        anchors.left:           hudPanel.right
+        anchors.leftMargin:     _toolsMargin
+        anchors.right:          parent.right
+        anchors.rightMargin:    _toolsMargin
+        anchors.bottom:         parent.bottom
+        anchors.bottomMargin:   _toolsMargin
+        height:                 _panelH
     }
 
     // Administrator sessions monitor only (SR-15): make that obvious on screen
@@ -49,13 +116,13 @@ Item {
         id:                         adminBanner
         visible:                    QGroundControl.corePlugin.kevaIsAdmin
         anchors.horizontalCenter:   parent.horizontalCenter
-        anchors.top:                parent.top
-        anchors.topMargin:          parentToolInsets.topEdgeCenterInset + _toolsMargin
+        anchors.bottom:             hudPanel.top
+        anchors.bottomMargin:       _toolsMargin * 2
         width:                      adminBannerText.implicitWidth + ScreenTools.defaultFontPixelWidth * 3
         height:                     adminBannerText.implicitHeight + ScreenTools.defaultFontPixelHeight * 0.6
         radius:                     ScreenTools.defaultFontPixelHeight / 4
         color:                      Qt.rgba(0, 0, 0, 0.7)
-        border.color:               QGroundControl.corePlugin.kevaColors.orange
+        border.color:               _kevaColors.orange
         border.width:               1
         z:                          1000
 
@@ -63,7 +130,7 @@ Item {
             id:                 adminBannerText
             anchors.centerIn:   parent
             text:               qsTr("ADMINISTRATOR (%1) - MONITORING ONLY").arg(QGroundControl.corePlugin.kevaUserId)
-            color:              QGroundControl.corePlugin.kevaColors.orange
+            color:              _kevaColors.orange
             font.bold:          true
         }
     }
